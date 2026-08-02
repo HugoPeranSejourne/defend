@@ -1,0 +1,26 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/wave_manager.gd" id="1_wave_script"]
+
+[node name="WaveManager" type="Node3D"]
+script = ExtResource("1_wave_script")
+total_enemies = 250
+spawn_interval = 0.18
+
+[node name="SpawnPoint1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -75, 0, -82)
+
+[node name="SpawnPoint2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -45, 0, -82)
+
+[node name="SpawnPoint3" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 0, -82)
+
+[node name="SpawnPoint4" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 0, -82)
+
+[node name="SpawnPoint5" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45, 0, -82)
+
+[node name="SpawnPoint6" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 75, 0, -82)

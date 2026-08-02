@@ -1,0 +1,227 @@
+[gd_scene load_steps=22 format=3]
+
+[ext_resource type="Script" path="res://scripts/unit_bombardier.gd" id="1_bomb_script"]
+[ext_resource type="PackedScene" path="res://scenes/fps_hud.tscn" id="2_fps_hud"]
+[ext_resource type="Texture2D" path="res://textures/soldier_allied_uniform.png" id="3_allied_uniform_tex"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ring"]
+shading_mode = 0
+albedo_color = Color(1, 0.6, 0.1, 0.95)
+
+[sub_resource type="TorusMesh" id="TorusMesh_ring"]
+material = SubResource("StandardMaterial3D_ring")
+inner_radius = 0.85
+outer_radius = 0.95
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bomb_uniform"]
+albedo_color = Color(0.15, 0.4, 0.85, 1)
+albedo_texture = ExtResource("3_allied_uniform_tex")
+roughness = 0.4
+uv1_scale = Vector3(1.5, 1.5, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_torso"]
+material = SubResource("StandardMaterial3D_bomb_uniform")
+size = Vector3(0.62, 0.7, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_skin"]
+albedo_color = Color(0.85, 0.68, 0.55, 1)
+roughness = 0.6
+
+[sub_resource type="SphereMesh" id="SphereMesh_head"]
+material = SubResource("StandardMaterial3D_skin")
+radius = 0.2
+height = 0.4
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_helmet"]
+albedo_color = Color(0.1, 0.2, 0.5, 1)
+metallic = 0.7
+roughness = 0.3
+
+[sub_resource type="SphereMesh" id="SphereMesh_helmet"]
+material = SubResource("StandardMaterial3D_helmet")
+radius = 0.235
+height = 0.38
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_launcher"]
+albedo_color = Color(0.1, 0.1, 0.12, 1)
+metallic = 0.85
+roughness = 0.2
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_launcher"]
+material = SubResource("StandardMaterial3D_launcher")
+top_radius = 0.12
+bottom_radius = 0.12
+height = 0.75
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_limb"]
+material = SubResource("StandardMaterial3D_bomb_uniform")
+radius = 0.11
+height = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_boots"]
+material = SubResource("StandardMaterial3D_launcher")
+size = Vector3(0.2, 0.22, 0.32)
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_unit"]
+radius = 0.45
+height = 1.85
+
+[sub_resource type="Animation" id="Animation_idle"]
+resource_name = "idle"
+length = 1.2
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CharacterPivot/Torso:position:y")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.6, 1.2),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [1.05, 1.08, 1.05]
+}
+
+[sub_resource type="Animation" id="Animation_run"]
+resource_name = "run"
+length = 0.6
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CharacterPivot/LegLeft:rotation:x")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.3, 0.6),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.55, -0.55, 0.55]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("CharacterPivot/LegRight:rotation:x")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.3, 0.6),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [-0.55, 0.55, -0.55]
+}
+
+[sub_resource type="Animation" id="Animation_shoot"]
+resource_name = "shoot"
+length = 0.3
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CharacterPivot/ArmRight/LauncherMesh:position:z")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.08, 0.3),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [-0.25, -0.05, -0.25]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_unit"]
+_data = {
+"idle": SubResource("Animation_idle"),
+"run": SubResource("Animation_run"),
+"shoot": SubResource("Animation_shoot")
+}
+
+[node name="UnitBombardier" type="CharacterBody3D" node_paths=PackedStringArray("anim_player", "selection_ring", "character_pivot", "leg_left", "leg_right", "arm_left", "arm_right", "head_pivot", "fps_camera", "gun_raycast")]
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_bomb_script")
+anim_player = NodePath("AnimationPlayer")
+selection_ring = NodePath("SelectionRing")
+character_pivot = NodePath("CharacterPivot")
+leg_left = NodePath("CharacterPivot/LegLeft")
+leg_right = NodePath("CharacterPivot/LegRight")
+arm_left = NodePath("CharacterPivot/ArmLeft")
+arm_right = NodePath("CharacterPivot/ArmRight")
+head_pivot = NodePath("CharacterPivot/HeadPivot")
+fps_camera = NodePath("CharacterPivot/HeadPivot/FPSCamera3D")
+gun_raycast = NodePath("CharacterPivot/HeadPivot/FPSCamera3D/GunRayCast3D")
+
+[node name="SelectionRing" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+visible = false
+mesh = SubResource("TorusMesh_ring")
+
+[node name="CharacterPivot" type="Node3D" parent="."]
+
+[node name="Torso" type="MeshInstance3D" parent="CharacterPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
+mesh = SubResource("BoxMesh_torso")
+
+[node name="HeadPivot" type="Node3D" parent="CharacterPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, 0)
+
+[node name="HeadMesh" type="MeshInstance3D" parent="CharacterPivot/HeadPivot"]
+mesh = SubResource("SphereMesh_head")
+
+[node name="Helmet" type="MeshInstance3D" parent="CharacterPivot/HeadPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -0.02)
+mesh = SubResource("SphereMesh_helmet")
+
+[node name="FPSCamera3D" type="Camera3D" parent="CharacterPivot/HeadPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, -0.1)
+fov = 85.0
+far = 1000.0
+
+[node name="GunRayCast3D" type="RayCast3D" parent="CharacterPivot/HeadPivot/FPSCamera3D"]
+target_position = Vector3(0, 0, -45)
+collision_mask = 3
+
+[node name="ArmLeft" type="MeshInstance3D" parent="CharacterPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, 0)
+mesh = SubResource("CapsuleMesh_limb")
+
+[node name="ArmRight" type="MeshInstance3D" parent="CharacterPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, -0.1)
+mesh = SubResource("CapsuleMesh_limb")
+
+[node name="LauncherMesh" type="MeshInstance3D" parent="CharacterPivot/ArmRight"]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, -0.15, -0.3)
+mesh = SubResource("CylinderMesh_launcher")
+
+[node name="LegLeft" type="MeshInstance3D" parent="CharacterPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.35, 0)
+mesh = SubResource("CapsuleMesh_limb")
+
+[node name="BootsLeft" type="MeshInstance3D" parent="CharacterPivot/LegLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, -0.05)
+mesh = SubResource("BoxMesh_boots")
+
+[node name="LegRight" type="MeshInstance3D" parent="CharacterPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.35, 0)
+mesh = SubResource("CapsuleMesh_limb")
+
+[node name="BootsRight" type="MeshInstance3D" parent="CharacterPivot/LegRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, -0.05)
+mesh = SubResource("BoxMesh_boots")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_unit")
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+path_desired_distance = 0.5
+target_desired_distance = 0.5
+path_height_offset = 0.0
+avoidance_enabled = true
+radius = 0.6
+
+[node name="FPSHUD" parent="." instance=ExtResource("2_fps_hud")]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_unit")
+}

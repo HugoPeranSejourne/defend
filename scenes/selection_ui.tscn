@@ -1,0 +1,94 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/selection_manager.gd" id="1_sel_script"]
+[ext_resource type="PackedScene" path="res://scenes/fps_hud.tscn" id="2_fps_hud_scene"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_possession_panel"]
+bg_color = Color(0.08, 0.14, 0.22, 0.88)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 0.75, 1, 0.8)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+expand_margin_left = 16.0
+expand_margin_top = 12.0
+expand_margin_right = 16.0
+expand_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
+bg_color = Color(0.15, 0.55, 0.9, 0.9)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+expand_margin_left = 12.0
+expand_margin_top = 6.0
+expand_margin_right = 12.0
+expand_margin_bottom = 6.0
+
+[node name="SelectionUI" type="CanvasLayer"]
+
+[node name="SelectionManager" type="Control" parent="." node_paths=PackedStringArray("possession_panel", "possession_button", "fps_hud")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_sel_script")
+possession_panel = NodePath("PossessionOverlayPanel")
+possession_button = NodePath("PossessionOverlayPanel/HBox/PossessionButton")
+fps_hud = NodePath("FPSHUD")
+
+[node name="PossessionOverlayPanel" type="PanelContainer" parent="SelectionManager"]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -90.0
+offset_right = 200.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_possession_panel")
+
+[node name="HBox" type="HBoxContainer" parent="SelectionManager/PossessionOverlayPanel"]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="VBoxText" type="VBoxContainer" parent="SelectionManager/PossessionOverlayPanel/HBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="SelectionManager/PossessionOverlayPanel/HBox/VBoxText"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "Unité Sélectionnée"
+
+[node name="KeyHintLabel" type="Label" parent="SelectionManager/PossessionOverlayPanel/HBox/VBoxText"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Appuyez sur [F] pour piloter"
+
+[node name="PossessionButton" type="Button" parent="SelectionManager/PossessionOverlayPanel/HBox"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+text = "Prendre le contrôle (FPS)"
+
+[node name="FPSHUD" parent="SelectionManager" instance=ExtResource("2_fps_hud_scene")]
+layout_mode = 1

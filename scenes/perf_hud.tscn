@@ -1,0 +1,97 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/perf_hud.gd" id="1_perf_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_perf_panel"]
+bg_color = Color(0.04, 0.06, 0.1, 0.88)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.8, 1, 0.5)
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+expand_margin_left = 10.0
+expand_margin_top = 8.0
+expand_margin_right = 10.0
+expand_margin_bottom = 8.0
+
+[node name="PerfHUD" type="CanvasLayer"]
+script = ExtResource("1_perf_script")
+
+[node name="TopLeftMargin" type="PanelContainer" parent="."]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 270.0
+offset_bottom = 255.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_perf_panel")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TopLeftMargin"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="Title" type="Label" parent="TopLeftMargin/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "PERFORMANCE & MATÉRIEL"
+
+[node name="FPSLabel" type="Label" parent="TopLeftMargin/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.95, 0.4, 1)
+theme_override_font_sizes/font_size = 13
+text = "FPS : 60 (16.6 ms)"
+
+[node name="DrawCallsLabel" type="Label" parent="TopLeftMargin/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 11
+text = "Draw Calls : 38"
+
+[node name="MemoryLabel" type="Label" parent="TopLeftMargin/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 11
+text = "RAM Statique : 85 MB (Pas de fuite)"
+
+[node name="VRAMLabel" type="Label" parent="TopLeftMargin/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.8, 1, 1)
+theme_override_font_sizes/font_size = 11
+text = "VRAM Textures : 112 MB"
+
+[node name="EntitiesLabel" type="Label" parent="TopLeftMargin/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_font_sizes/font_size = 11
+text = "Ennemis : 0 | Soldats : 15"
+
+[node name="WarningLabel" type="Label" parent="TopLeftMargin/VBoxContainer"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
+theme_override_font_sizes/font_size = 10
+text = "[PERF LOG] Baisse FPS"
+autowrap_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="TopLeftMargin/VBoxContainer"]
+layout_mode = 2
+
+[node name="ControlsHeader" type="Label" parent="TopLeftMargin/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 11
+text = "COMMANDES (Clavier & Manette PS5) :"
+
+[node name="ControlsGuideLabel" type="Label" parent="TopLeftMargin/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 10
+text = "• Zoom (0-450m) : Molette / L1 - R1 / Trackpad
+• Caméra RTS : WASD / ZQSD / Stick G
+• Mode FPS : Touche F / Touche △
+• Switch Armes : Touches 1-2 / Touche ☐
+• Tirer en FPS : Clic Gauche / Gâchette R2"
+autowrap_mode = 2

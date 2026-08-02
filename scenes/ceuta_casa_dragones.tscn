@@ -1,0 +1,62 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/ceuta_casa_dragones_facade.png" id="1_dragons_tex"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dragons"]
+albedo_texture = ExtResource("1_dragons_tex")
+roughness = 0.5
+uv1_scale = Vector3(2.5, 3.5, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_building"]
+material = SubResource("StandardMaterial3D_dragons")
+size = Vector3(12, 14, 12)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_roof_spire"]
+albedo_color = Color(0.12, 0.15, 0.18, 1)
+metallic = 0.8
+roughness = 0.2
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_spire"]
+material = SubResource("StandardMaterial3D_roof_spire")
+top_radius = 0.1
+bottom_radius = 1.4
+height = 5.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_balcony"]
+material = SubResource("StandardMaterial3D_roof_spire")
+size = Vector3(12.4, 0.8, 12.4)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_dragons"]
+size = Vector3(12, 14, 12)
+
+[node name="CeutaCasaDragones" type="StaticBody3D"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="BuildingMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, 0)
+mesh = SubResource("BoxMesh_building")
+
+[node name="RoofBalustrade" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 14.4, 0)
+mesh = SubResource("BoxMesh_balcony")
+
+[node name="DragonCornerSpire1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.5, 17.0, -5.5)
+mesh = SubResource("CylinderMesh_spire")
+
+[node name="DragonCornerSpire2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 17.0, -5.5)
+mesh = SubResource("CylinderMesh_spire")
+
+[node name="DragonCornerSpire3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.5, 17.0, 5.5)
+mesh = SubResource("CylinderMesh_spire")
+
+[node name="DragonCornerSpire4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 17.0, 5.5)
+mesh = SubResource("CylinderMesh_spire")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, 0)
+shape = SubResource("BoxShape3D_dragons")

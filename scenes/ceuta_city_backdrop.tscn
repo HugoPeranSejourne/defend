@@ -1,0 +1,18 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/ceuta_background_panorama.png" id="1_pano_tex"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_panorama"]
+shading_mode = 0
+albedo_texture = ExtResource("1_pano_tex")
+uv1_scale = Vector3(1, 1, 1)
+
+[sub_resource type="QuadMesh" id="QuadMesh_panorama"]
+material = SubResource("StandardMaterial3D_panorama")
+size = Vector2(320, 90)
+
+[node name="CeutaCityBackdrop" type="Node3D"]
+
+[node name="BackdropMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 38, 0)
+mesh = SubResource("QuadMesh_panorama")

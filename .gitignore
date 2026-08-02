@@ -1,0 +1,21 @@
+# Godot 4 cache and import folder
+.godot/
+
+# Binary & build exports
+*.apk
+*.aab
+*.a
+*.o
+*.so
+*.dylib
+*.exe
+*.dll
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

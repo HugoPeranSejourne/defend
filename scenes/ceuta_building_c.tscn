@@ -1,0 +1,61 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/ceuta_fortress_stone.png" id="1_stone_tex"]
+[ext_resource type="Texture2D" path="res://textures/ceuta_fortress_stone_normal.png" id="2_stone_norm"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fortress"]
+albedo_texture = ExtResource("1_stone_tex")
+roughness = 0.7
+normal_enabled = true
+normal_scale = 1.5
+normal_texture = ExtResource("2_stone_norm")
+uv1_scale = Vector3(4, 2, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall"]
+material = SubResource("StandardMaterial3D_fortress")
+size = Vector3(14, 6, 4)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_tower"]
+material = SubResource("StandardMaterial3D_fortress")
+top_radius = 2.5
+bottom_radius = 2.8
+height = 8.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_crenellation"]
+material = SubResource("StandardMaterial3D_fortress")
+size = Vector3(1.0, 1.2, 0.6)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall"]
+size = Vector3(14, 6, 4)
+
+[node name="CeutaBuildingC" type="StaticBody3D"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="WallMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+mesh = SubResource("BoxMesh_wall")
+
+[node name="BastionTower" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 4, 0)
+mesh = SubResource("CylinderMesh_tower")
+
+[node name="Merlon1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 6.6, 1.8)
+mesh = SubResource("BoxMesh_crenellation")
+
+[node name="Merlon2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 6.6, 1.8)
+mesh = SubResource("BoxMesh_crenellation")
+
+[node name="Merlon3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 6.6, 1.8)
+mesh = SubResource("BoxMesh_crenellation")
+
+[node name="Merlon4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 6.6, 1.8)
+mesh = SubResource("BoxMesh_crenellation")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+shape = SubResource("BoxShape3D_wall")

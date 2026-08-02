@@ -1,0 +1,55 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/ceuta_facade_terracotta.png" id="1_facade_tex"]
+[ext_resource type="Texture2D" path="res://textures/ceuta_facade_terracotta_normal.png" id="2_facade_norm"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_facade"]
+albedo_texture = ExtResource("1_facade_tex")
+roughness = 0.55
+normal_enabled = true
+normal_scale = 1.2
+normal_texture = ExtResource("2_facade_norm")
+uv1_scale = Vector3(2, 3, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_building"]
+material = SubResource("StandardMaterial3D_facade")
+size = Vector3(8, 10, 12)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_trim"]
+albedo_color = Color(0.95, 0.95, 0.92, 1)
+roughness = 0.4
+
+[sub_resource type="BoxMesh" id="BoxMesh_cornice"]
+material = SubResource("StandardMaterial3D_trim")
+size = Vector3(8.4, 0.6, 12.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_awning"]
+albedo_color = Color(0.75, 0.18, 0.18, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_awning"]
+material = SubResource("StandardMaterial3D_awning")
+size = Vector3(8.8, 0.3, 2.0)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_building"]
+size = Vector3(8, 10, 12)
+
+[node name="CeutaBuildingA" type="StaticBody3D"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="BuildingMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+mesh = SubResource("BoxMesh_building")
+
+[node name="Cornice" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 10.1, 0)
+mesh = SubResource("BoxMesh_cornice")
+
+[node name="Awning" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.8, 6.5)
+mesh = SubResource("BoxMesh_awning")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 0)
+shape = SubResource("BoxShape3D_building")

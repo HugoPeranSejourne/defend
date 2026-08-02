@@ -1,0 +1,39 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/ceuta_facade_blue_neoclassical.png" id="1_blue_tex"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_blue_facade"]
+albedo_texture = ExtResource("1_blue_tex")
+roughness = 0.45
+uv1_scale = Vector3(2.5, 4, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_building_d"]
+material = SubResource("StandardMaterial3D_blue_facade")
+size = Vector3(10, 14, 12)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_white_trim"]
+albedo_color = Color(0.96, 0.96, 0.94, 1)
+roughness = 0.3
+
+[sub_resource type="BoxMesh" id="BoxMesh_roof_balustrade"]
+material = SubResource("StandardMaterial3D_white_trim")
+size = Vector3(10.4, 0.8, 12.4)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_building_d"]
+size = Vector3(10, 14, 12)
+
+[node name="CeutaBuildingD" type="StaticBody3D"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="BuildingMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, 0)
+mesh = SubResource("BoxMesh_building_d")
+
+[node name="RoofBalustrade" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 14.4, 0)
+mesh = SubResource("BoxMesh_roof_balustrade")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, 0)
+shape = SubResource("BoxShape3D_building_d")

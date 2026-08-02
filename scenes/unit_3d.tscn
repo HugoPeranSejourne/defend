@@ -1,0 +1,127 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/unit_3d.gd" id="1_unit_script"]
+[ext_resource type="PackedScene" path="res://scenes/fps_hud.tscn" id="2_fps_hud"]
+[ext_resource type="PackedScene" path="res://assets/models/soldier_allied_human.glb" id="3_soldier_glb"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ring"]
+shading_mode = 0
+albedo_color = Color(0.1, 0.65, 1, 0.95)
+
+[sub_resource type="TorusMesh" id="TorusMesh_ring"]
+material = SubResource("StandardMaterial3D_ring")
+inner_radius = 0.75
+outer_radius = 0.85
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_unit"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="Animation" id="Animation_idle"]
+resource_name = "idle"
+length = 1.2
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CharacterPivot:position:y")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.6, 1.2),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.0, 0.03, 0.0]
+}
+
+[sub_resource type="Animation" id="Animation_run"]
+resource_name = "run"
+length = 0.6
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CharacterPivot:rotation:y")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.3, 0.6),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [-0.08, 0.08, -0.08]
+}
+
+[sub_resource type="Animation" id="Animation_shoot"]
+resource_name = "shoot"
+length = 0.15
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CharacterPivot:position:z")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.04, 0.15),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.0, 0.08, 0.0]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_unit"]
+_data = {
+"idle": SubResource("Animation_idle"),
+"run": SubResource("Animation_run"),
+"shoot": SubResource("Animation_shoot")
+}
+
+[node name="Unit3D" type="CharacterBody3D" node_paths=PackedStringArray("anim_player", "selection_ring", "character_pivot", "head_pivot", "fps_camera", "gun_raycast")]
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_unit_script")
+anim_player = NodePath("AnimationPlayer")
+selection_ring = NodePath("SelectionRing")
+character_pivot = NodePath("CharacterPivot")
+head_pivot = NodePath("CharacterPivot/HeadPivot")
+fps_camera = NodePath("CharacterPivot/HeadPivot/FPSCamera3D")
+gun_raycast = NodePath("CharacterPivot/HeadPivot/FPSCamera3D/GunRayCast3D")
+
+[node name="SelectionRing" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+visible = false
+mesh = SubResource("TorusMesh_ring")
+
+[node name="CharacterPivot" type="Node3D" parent="."]
+
+[node name="SoldierHumanGLB" parent="CharacterPivot" instance=ExtResource("3_soldier_glb")]
+transform = Transform3D(0.01, 0, 0, 0, 0.01, 0, 0, 0, 0.01, 0, 0, 0)
+
+[node name="HeadPivot" type="Node3D" parent="CharacterPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.62, 0)
+
+[node name="FPSCamera3D" type="Camera3D" parent="CharacterPivot/HeadPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, -0.28)
+fov = 85.0
+near = 0.05
+far = 1000.0
+
+[node name="GunRayCast3D" type="RayCast3D" parent="CharacterPivot/HeadPivot/FPSCamera3D"]
+target_position = Vector3(0, 0, -45)
+collision_mask = 3
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_unit")
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+path_desired_distance = 0.5
+target_desired_distance = 0.5
+path_height_offset = 0.0
+avoidance_enabled = true
+radius = 0.6
+
+[node name="FPSHUD" parent="." instance=ExtResource("2_fps_hud")]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_unit")
+}

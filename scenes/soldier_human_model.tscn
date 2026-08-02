@@ -1,0 +1,152 @@
+[gd_scene load_steps=18 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/soldier_allied_uniform.png" id="1_allied_tex"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_skin"]
+albedo_color = Color(0.85, 0.68, 0.55, 1)
+roughness = 0.55
+
+[sub_resource type="SphereMesh" id="SphereMesh_head"]
+material = SubResource("StandardMaterial3D_skin")
+radius = 0.16
+height = 0.32
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_eyes"]
+albedo_color = Color(0.12, 0.1, 0.08, 1)
+roughness = 0.2
+
+[sub_resource type="SphereMesh" id="SphereMesh_eye"]
+material = SubResource("StandardMaterial3D_eyes")
+radius = 0.032
+height = 0.064
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_helmet"]
+albedo_color = Color(0.08, 0.22, 0.6, 1)
+metallic = 0.65
+roughness = 0.3
+
+[sub_resource type="SphereMesh" id="SphereMesh_helmet"]
+material = SubResource("StandardMaterial3D_helmet")
+radius = 0.185
+height = 0.28
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_visor"]
+transparency = 1
+albedo_color = Color(0.2, 0.8, 1, 0.45)
+metallic = 0.9
+roughness = 0.1
+
+[sub_resource type="BoxMesh" id="BoxMesh_visor"]
+material = SubResource("StandardMaterial3D_visor")
+size = Vector3(0.26, 0.08, 0.06)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uniform"]
+albedo_color = Color(0.15, 0.4, 0.9, 1)
+albedo_texture = ExtResource("1_allied_tex")
+roughness = 0.45
+uv1_scale = Vector3(1.5, 1.5, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_torso"]
+material = SubResource("StandardMaterial3D_uniform")
+size = Vector3(0.46, 0.55, 0.28)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_black_gear"]
+albedo_color = Color(0.08, 0.08, 0.1, 1)
+roughness = 0.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_vest"]
+material = SubResource("StandardMaterial3D_black_gear")
+size = Vector3(0.50, 0.42, 0.32)
+
+[sub_resource type="BoxMesh" id="BoxMesh_pouch"]
+material = SubResource("StandardMaterial3D_black_gear")
+size = Vector3(0.12, 0.16, 0.10)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_limb"]
+material = SubResource("StandardMaterial3D_uniform")
+radius = 0.085
+height = 0.52
+
+[sub_resource type="BoxMesh" id="BoxMesh_gun"]
+material = SubResource("StandardMaterial3D_black_gear")
+size = Vector3(0.09, 0.12, 0.65)
+
+[sub_resource type="BoxMesh" id="BoxMesh_boots"]
+material = SubResource("StandardMaterial3D_black_gear")
+size = Vector3(0.16, 0.18, 0.28)
+
+[node name="SoldierHumanModel" type="Node3D"]
+
+[node name="Torso" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.02, 0)
+mesh = SubResource("BoxMesh_torso")
+
+[node name="KevlarVest" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+mesh = SubResource("BoxMesh_vest")
+
+[node name="RadioPouchL" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14, -0.05, 0.17)
+mesh = SubResource("BoxMesh_pouch")
+
+[node name="RadioPouchR" type="MeshInstance3D" parent="Torso"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14, -0.05, 0.17)
+mesh = SubResource("BoxMesh_pouch")
+
+[node name="HeadGroup" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.48, 0)
+
+[node name="HeadMesh" type="MeshInstance3D" parent="HeadGroup"]
+mesh = SubResource("SphereMesh_head")
+
+[node name="EyeLeft" type="MeshInstance3D" parent="HeadGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.06, 0.03, -0.14)
+mesh = SubResource("SphereMesh_eye")
+
+[node name="EyeRight" type="MeshInstance3D" parent="HeadGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.06, 0.03, -0.14)
+mesh = SubResource("SphereMesh_eye")
+
+[node name="Helmet" type="MeshInstance3D" parent="HeadGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -0.01)
+mesh = SubResource("SphereMesh_helmet")
+
+[node name="Visor" type="MeshInstance3D" parent="HeadGroup"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -0.13)
+mesh = SubResource("BoxMesh_visor")
+
+[node name="ArmLeft" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 1.02, 0)
+mesh = SubResource("CapsuleMesh_limb")
+
+[node name="GloveLeft" type="MeshInstance3D" parent="ArmLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.22, 0)
+mesh = SubResource("BoxMesh_pouch")
+
+[node name="ArmRight" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.32, 1.02, -0.08)
+mesh = SubResource("CapsuleMesh_limb")
+
+[node name="GloveRight" type="MeshInstance3D" parent="ArmRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.22, 0)
+mesh = SubResource("BoxMesh_pouch")
+
+[node name="GunMesh" type="MeshInstance3D" parent="ArmRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.12, -0.25)
+mesh = SubResource("BoxMesh_gun")
+
+[node name="LegLeft" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16, 0.36, 0)
+mesh = SubResource("CapsuleMesh_limb")
+
+[node name="BootLeft" type="MeshInstance3D" parent="LegLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.22, -0.04)
+mesh = SubResource("BoxMesh_boots")
+
+[node name="LegRight" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.16, 0.36, 0)
+mesh = SubResource("CapsuleMesh_limb")
+
+[node name="BootRight" type="MeshInstance3D" parent="LegRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.22, -0.04)
+mesh = SubResource("BoxMesh_boots")

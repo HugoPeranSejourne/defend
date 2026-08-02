@@ -1,0 +1,291 @@
+[gd_scene load_steps=41 format=3]
+
+[ext_resource type="Script" path="res://scripts/main_stage.gd" id="1_main_script"]
+[ext_resource type="PackedScene" path="res://scenes/rts_camera.tscn" id="2_camera_scene"]
+[ext_resource type="PackedScene" path="res://scenes/selection_ui.tscn" id="3_ui_scene"]
+[ext_resource type="PackedScene" path="res://scenes/unit_3d.tscn" id="4_unit_scene"]
+[ext_resource type="PackedScene" path="res://scenes/base_structure.tscn" id="5_base_scene"]
+[ext_resource type="PackedScene" path="res://scenes/wave_manager.tscn" id="6_wave_scene"]
+[ext_resource type="PackedScene" path="res://scenes/main_hud.tscn" id="7_hud_scene"]
+[ext_resource type="Script" path="res://scripts/build_manager.gd" id="8_build_script"]
+[ext_resource type="Texture2D" path="res://textures/ceuta_pavement_tile.png" id="9_pavement_tex"]
+[ext_resource type="Texture2D" path="res://textures/ceuta_pavement_tile_normal.png" id="10_pavement_norm"]
+[ext_resource type="PackedScene" path="res://scenes/ceuta_building_a.tscn" id="11_bldg_a"]
+[ext_resource type="PackedScene" path="res://scenes/ceuta_building_b.tscn" id="12_bldg_b"]
+[ext_resource type="PackedScene" path="res://scenes/ceuta_building_c.tscn" id="13_bldg_c"]
+[ext_resource type="PackedScene" path="res://scenes/ceuta_building_d.tscn" id="14_bldg_d"]
+[ext_resource type="PackedScene" path="res://scenes/ceuta_casa_dragones.tscn" id="15_dragons"]
+[ext_resource type="PackedScene" path="res://scenes/ceuta_palacio_asamblea.tscn" id="16_palacio"]
+[ext_resource type="PackedScene" path="res://scenes/ceuta_city_backdrop.tscn" id="17_backdrop"]
+[ext_resource type="PackedScene" path="res://scenes/perf_hud.tscn" id="18_perf_hud"]
+[ext_resource type="PackedScene" path="res://scenes/corpse_manager.tscn" id="19_corpse_mgr"]
+[ext_resource type="PackedScene" path="res://scenes/sound_manager.tscn" id="20_sound_mgr"]
+[ext_resource type="PackedScene" path="res://scenes/minimap_hud.tscn" id="21_minimap_hud"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
+sky_top_color = Color(0.28, 0.52, 0.88, 1)
+sky_horizon_color = Color(0.95, 0.72, 0.48, 1)
+ground_bottom_color = Color(0.15, 0.16, 0.2, 1)
+ground_horizon_color = Color(0.95, 0.72, 0.48, 1)
+
+[sub_resource type="Sky" id="Sky_env"]
+sky_material = SubResource("ProceduralSkyMaterial_sky")
+
+[sub_resource type="Environment" id="Environment_nextgen"]
+background_mode = 2
+sky = SubResource("Sky_env")
+ambient_light_source = 3
+ambient_light_color = Color(0.48, 0.5, 0.62, 1)
+ambient_light_energy = 0.95
+tonemap_mode = 3
+tonemap_exposure = 1.15
+tonemap_white = 1.2
+ssao_enabled = true
+ssao_radius = 1.6
+ssao_intensity = 2.2
+ssr_enabled = true
+glow_enabled = true
+glow_intensity = 1.2
+glow_bloom = 0.25
+fog_enabled = true
+fog_light_color = Color(0.98, 0.72, 0.45, 1)
+fog_density = 0.001
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_rts"]
+vertices = PackedVector3Array(-179, 0, -179, 179, 0, -179, 179, 0, 179, -179, 0, 179)
+polygons = [PackedInt32Array(0, 1, 2, 3)]
+agent_radius = 0.85
+agent_height = 1.6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ceuta_pavement"]
+albedo_texture = ExtResource("9_pavement_tex")
+roughness = 0.45
+normal_enabled = true
+normal_scale = 1.4
+normal_texture = ExtResource("10_pavement_norm")
+uv1_scale = Vector3(72, 72, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+material = SubResource("StandardMaterial3D_ceuta_pavement")
+size = Vector2(360, 360)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
+size = Vector3(360, 1, 360)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_trunk"]
+albedo_color = Color(0.42, 0.32, 0.22, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_trunk"]
+material = SubResource("StandardMaterial3D_trunk")
+top_radius = 0.2
+bottom_radius = 0.35
+height = 6.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_palm_frond"]
+albedo_color = Color(0.15, 0.65, 0.25, 1)
+roughness = 0.4
+
+[sub_resource type="SphereMesh" id="SphereMesh_frond"]
+material = SubResource("StandardMaterial3D_palm_frond")
+radius = 1.8
+height = 1.2
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_tree"]
+height = 6.0
+radius = 0.4
+
+[node name="MainStage" type="Node3D"]
+script = ExtResource("1_main_script")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_nextgen")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 0, 45, 0)
+light_color = Color(1, 0.88, 0.72, 1)
+light_energy = 1.2
+shadow_enabled = true
+shadow_bias = 0.025
+
+[node name="RTSCamera3D" parent="." instance=ExtResource("2_camera_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 24)
+
+[node name="BuildManager" type="Node" parent="."]
+script = ExtResource("8_build_script")
+
+[node name="SoundManager" parent="." instance=ExtResource("20_sound_mgr")]
+
+[node name="CorpseManager" parent="." instance=ExtResource("19_corpse_mgr")]
+
+[node name="CeutaCityBackdrop" parent="." instance=ExtResource("17_backdrop")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -220)
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavigationMesh_rts")
+
+[node name="GroundStaticBody" type="StaticBody3D" parent="NavigationRegion3D"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="GroundMesh" type="MeshInstance3D" parent="NavigationRegion3D/GroundStaticBody"]
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="GroundCollision" type="CollisionShape3D" parent="NavigationRegion3D/GroundStaticBody"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+shape = SubResource("BoxShape3D_ground")
+
+[node name="CasaDeLosDragones" parent="NavigationRegion3D" instance=ExtResource("15_dragons")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0, 0)
+
+[node name="PalacioAsamblea" parent="NavigationRegion3D" instance=ExtResource("16_palacio")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0, 0)
+
+[node name="CeutaBuildingD_North1" parent="NavigationRegion3D" instance=ExtResource("14_bldg_d")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0, -80)
+
+[node name="CeutaBuildingA_North2" parent="NavigationRegion3D" instance=ExtResource("11_bldg_a")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0, -55)
+
+[node name="CeutaBuildingB_North3" parent="NavigationRegion3D" instance=ExtResource("12_bldg_b")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0, -30)
+
+[node name="CeutaBuildingD_South1" parent="NavigationRegion3D" instance=ExtResource("14_bldg_d")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0, 30)
+
+[node name="CeutaBuildingA_South2" parent="NavigationRegion3D" instance=ExtResource("11_bldg_a")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26, 0, 55)
+
+[node name="CeutaBuildingB_RightNorth1" parent="NavigationRegion3D" instance=ExtResource("12_bldg_b")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0, -80)
+
+[node name="CeutaBuildingD_RightNorth2" parent="NavigationRegion3D" instance=ExtResource("14_bldg_d")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0, -55)
+
+[node name="CeutaBuildingA_RightNorth3" parent="NavigationRegion3D" instance=ExtResource("11_bldg_a")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0, -30)
+
+[node name="CeutaBuildingB_RightSouth1" parent="NavigationRegion3D" instance=ExtResource("12_bldg_b")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0, 30)
+
+[node name="CeutaBuildingD_RightSouth2" parent="NavigationRegion3D" instance=ExtResource("14_bldg_d")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 0, 55)
+
+[node name="CeutaFortressWall_Left" parent="NavigationRegion3D" instance=ExtResource("13_bldg_c")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, 85)
+
+[node name="CeutaFortressWall_Right" parent="NavigationRegion3D" instance=ExtResource("13_bldg_c")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, 85)
+
+[node name="StreetLight_1" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17, 3.5, -60)
+light_color = Color(1, 0.75, 0.45, 1)
+light_energy = 2.0
+omni_range = 15.0
+
+[node name="StreetLight_2" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17, 3.5, -60)
+light_color = Color(1, 0.75, 0.45, 1)
+light_energy = 2.0
+omni_range = 15.0
+
+[node name="StreetLight_3" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17, 3.5, -20)
+light_color = Color(1, 0.75, 0.45, 1)
+light_energy = 2.0
+omni_range = 15.0
+
+[node name="StreetLight_4" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17, 3.5, -20)
+light_color = Color(1, 0.75, 0.45, 1)
+light_energy = 2.0
+omni_range = 15.0
+
+[node name="StreetLight_5" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17, 3.5, 20)
+light_color = Color(1, 0.75, 0.45, 1)
+light_energy = 2.0
+omni_range = 15.0
+
+[node name="StreetLight_6" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17, 3.5, 20)
+light_color = Color(1, 0.75, 0.45, 1)
+light_energy = 2.0
+omni_range = 15.0
+
+[node name="PalmTree_1" type="StaticBody3D" parent="NavigationRegion3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -17, 0, -60)
+collision_layer = 1
+collision_mask = 0
+
+[node name="Trunk" type="MeshInstance3D" parent="NavigationRegion3D/PalmTree_1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+mesh = SubResource("CylinderMesh_trunk")
+
+[node name="Fronds" type="MeshInstance3D" parent="NavigationRegion3D/PalmTree_1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
+mesh = SubResource("SphereMesh_frond")
+
+[node name="Collision" type="CollisionShape3D" parent="NavigationRegion3D/PalmTree_1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+shape = SubResource("CylinderShape3D_tree")
+
+[node name="BaseStructure" parent="." instance=ExtResource("5_base_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 75)
+
+[node name="WaveManager" parent="." instance=ExtResource("6_wave_scene")]
+
+[node name="UnitsContainer" type="Node3D" parent="."]
+
+[node name="Unit3D_1" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 0, 40)
+
+[node name="Unit3D_2" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 44)
+
+[node name="Unit3D_3" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 38)
+
+[node name="Unit3D_4" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 42)
+
+[node name="Unit3D_5" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 36)
+
+[node name="Unit3D_6" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 42)
+
+[node name="Unit3D_7" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 38)
+
+[node name="Unit3D_8" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 44)
+
+[node name="Unit3D_9" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 0, 40)
+
+[node name="Unit3D_10" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0, 50)
+
+[node name="Unit3D_11" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0, 52)
+
+[node name="Unit3D_12" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 48)
+
+[node name="Unit3D_13" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 52)
+
+[node name="Unit3D_14" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0, 50)
+
+[node name="Unit3D_15" parent="UnitsContainer" instance=ExtResource("4_unit_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 56)
+
+[node name="SelectionUI" parent="." instance=ExtResource("3_ui_scene")]
+
+[node name="MainHUD" parent="." instance=ExtResource("7_hud_scene")]
+
+[node name="PerfHUD" parent="." instance=ExtResource("18_perf_hud")]
+
+[node name="MinimapHUD" parent="." instance=ExtResource("21_minimap_hud")]

@@ -1,0 +1,92 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy_boss.gd" id="1_boss_script"]
+[ext_resource type="PackedScene" path="res://assets/models/insurgent_enemy_human.glb" id="2_enemy_glb"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_unit"]
+radius = 0.65
+height = 2.4
+
+[sub_resource type="Animation" id="Animation_idle"]
+resource_name = "idle"
+length = 1.2
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CharacterPivot:position:y")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.6, 1.2),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.0, 0.04, 0.0]
+}
+
+[sub_resource type="Animation" id="Animation_machete_slash"]
+resource_name = "machete_slash"
+length = 0.5
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CharacterPivot:rotation:y")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [-0.5, 0.5, -0.5]
+}
+
+[sub_resource type="Animation" id="Animation_run"]
+resource_name = "run"
+length = 0.8
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("CharacterPivot:rotation:y")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.4, 0.8),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [-0.1, 0.1, -0.1]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_enemy"]
+_data = {
+"idle": SubResource("Animation_idle"),
+"machete_slash": SubResource("Animation_machete_slash"),
+"run": SubResource("Animation_run")
+}
+
+[node name="EnemyBoss" type="CharacterBody3D" node_paths=PackedStringArray("anim_player", "character_pivot")]
+collision_layer = 2
+collision_mask = 5
+script = ExtResource("1_boss_script")
+anim_player = NodePath("AnimationPlayer")
+character_pivot = NodePath("CharacterPivot")
+
+[node name="CharacterPivot" type="Node3D" parent="."]
+
+[node name="InsurgentEnemyGLB" parent="CharacterPivot" instance=ExtResource("2_enemy_glb")]
+transform = Transform3D(0.014, 0, 0, 0, 0.014, 0, 0, 0, 0.014, 0, 0, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+shape = SubResource("CapsuleShape3D_unit")
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+path_desired_distance = 0.5
+target_desired_distance = 0.5
+avoidance_enabled = true
+radius = 1.2
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_enemy")
+}
