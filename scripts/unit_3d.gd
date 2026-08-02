@@ -44,19 +44,13 @@ func _ready() -> void:
 	health = max_health
 	set_selected(false)
 	
-	# Évaluation forcée du squelette 3D et du moteur d'animations GLTF
-	var skel := find_child("Skeleton3D", true, false) as Skeleton3D
-	if skel:
-		skel.reset_bone_poses()
-		
 	_glb_anim_player = find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if _glb_anim_player and _glb_anim_player.has_animation("Idle"):
 		_glb_anim_player.play("Idle")
 
-	# Teinture du matériau d'origine GLTF sans détruire le shader de skinning
 	var mesh_inst := find_child("vanguard_Mesh", true, false) as MeshInstance3D
 	if mesh_inst:
-		mesh_inst.extra_cull_margin = 16.0
+		mesh_inst.extra_cull_margin = 4.0
 		var orig_mat := mesh_inst.get_active_material(0)
 		if orig_mat and orig_mat is StandardMaterial3D:
 			var mat := orig_mat.duplicate() as StandardMaterial3D

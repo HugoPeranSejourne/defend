@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://e8n92m4ks1p7q"
-path="res://.godot/imported/insurgent_enemy_human.glb-3197cfa8d9dcd4c32a90a2e06cf01b65.scn"
+uid="uid://b78k3n2nap1qx"
+path="res://.godot/imported/insurgent_enemy_human.glb-59d035b9e86f0a4be37c4f376bf9ee15.scn"
 
 [deps]
 
 source_file="res://assets/models/insurgent_enemy_human.glb"
-dest_files=["res://.godot/imported/insurgent_enemy_human.glb-3197cfa8d9dcd4c32a90a2e06cf01b65.scn"]
+dest_files=["res://.godot/imported/insurgent_enemy_human.glb-59d035b9e86f0a4be37c4f376bf9ee15.scn"]
 
 [params]
 
@@ -19,7 +19,7 @@ nodes/root_script=null
 mesh_library/use_node_names_as_mesh_names=false
 array_mesh/deduplicate_surfaces=true
 nodes/apply_root_scale=true
-nodes/root_scale=0.0415
+nodes/root_scale=1.0
 nodes/import_as_skeleton_bones=false
 nodes/use_name_suffixes=true
 nodes/use_node_type_suffixes=true

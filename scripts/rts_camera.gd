@@ -19,6 +19,7 @@ func _ready() -> void:
 	target_zoom = 40.0
 	_update_camera_transform()
 	if camera:
+		camera.current = true
 		camera.far = 3500.0
 
 func set_fps_active(active: bool) -> void:
