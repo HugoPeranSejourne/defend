@@ -37,20 +37,25 @@ var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 
 
 var _cam_pitch: float = 0.0
 var _fps_hud_node: Control = null
+var _glb_anim_player: AnimationPlayer = null
 
 func _ready() -> void:
 	add_to_group("units")
 	health = max_health
 	set_selected(false)
 	
-	# Scurisation du maillage skinn 3D (extra_cull_margin & matriau PBR opaque)
+	# Évaluation forcée du squelette 3D et du moteur d'animations GLTF ("Idle", "Run", "Walk")
+	var skel := find_child("Skeleton3D", true, false) as Skeleton3D
+	if skel:
+		skel.reset_bone_poses()
+		
+	_glb_anim_player = find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if _glb_anim_player and _glb_anim_player.has_animation("Idle"):
+		_glb_anim_player.play("Idle")
+
 	var mesh_inst := find_child("vanguard_Mesh", true, false) as MeshInstance3D
 	if mesh_inst:
-		mesh_inst.extra_cull_margin = 4.0
-		var skel := mesh_inst.get_node_or_null(mesh_inst.skeleton) as Skeleton3D
-		if skel == null:
-			mesh_inst.skeleton = NodePath("..")
-			
+		mesh_inst.extra_cull_margin = 8.0
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = Color(0.2, 0.6, 1.0, 1.0)
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
@@ -66,6 +71,19 @@ func _ready() -> void:
 	if hud and hud is Control:
 		_fps_hud_node = hud as Control
 		_fps_hud_node.visible = false
+
+func _play_human_anim(anim_name: String) -> void:
+	if _is_dying or not _glb_anim_player:
+		return
+	var target_anim := "Idle"
+	match anim_name:
+		"run": target_anim = "Run"
+		"walk": target_anim = "Walk"
+		"idle": target_anim = "Idle"
+		_: target_anim = "Idle"
+		
+	if _glb_anim_player.has_animation(target_anim) and _glb_anim_player.current_animation != target_anim:
+		_glb_anim_player.play(target_anim)
 
 func set_selected(selected: bool) -> void:
 	is_selected = selected
@@ -149,8 +167,7 @@ func _update_fps_hud_weapon_text() -> void:
 			_fps_hud_node.call("set_weapon_info", "Fusil d'Assaut (Létal)", Color(1.0, 0.4, 0.2))
 
 func _perform_fps_shoot() -> void:
-	if anim_player and anim_player.has_animation("shoot"):
-		anim_player.play("shoot")
+	_play_human_anim("idle")
 		
 	var muzzle_pos := global_position + Vector3(0, 1.4, 0)
 	var shoot_target_pos := muzzle_pos + (-fps_camera.global_transform.basis.z * 40.0)
@@ -262,13 +279,11 @@ func _physics_process(delta: float) -> void:
 			var move_dir := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 			velocity.x = move_dir.x * move_speed
 			velocity.z = move_dir.z * move_speed
-			if anim_player and anim_player.has_animation("run"):
-				anim_player.play("run")
+			_play_human_anim("run")
 		else:
 			velocity.x = 0.0
 			velocity.z = 0.0
-			if anim_player and anim_player.has_animation("idle"):
-				anim_player.play("idle")
+			_play_human_anim("idle")
 
 		move_and_slide()
 		return
@@ -307,6 +322,7 @@ func _physics_process(delta: float) -> void:
 			var target_vel := dir * move_speed
 			var target_angle := atan2(-dir.x, -dir.z)
 			rotation.y = lerp_angle(rotation.y, target_angle, delta * rotation_speed)
+			_play_human_anim("run")
 			if nav_agent.avoidance_enabled:
 				nav_agent.set_velocity(target_vel)
 			else:
@@ -318,8 +334,7 @@ func _auto_shoot_at_target(target: Node3D) -> void:
 	if not is_instance_valid(target):
 		return
 		
-	if anim_player and anim_player.has_animation("shoot"):
-		anim_player.play("shoot")
+	_play_human_anim("idle")
 		
 	var muzzle_pos := global_position + Vector3(0, 1.3, 0)
 	var target_pos := target.global_position + Vector3(0, 0.9, 0)

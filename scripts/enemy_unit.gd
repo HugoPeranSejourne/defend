@@ -28,7 +28,7 @@ var _stagger_timer: float = 0.0
 var _knockback_velocity: Vector3 = Vector3.ZERO
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9.8)
 var _is_dying: bool = false
-var _current_anim: String = ""
+var _glb_anim_player: AnimationPlayer = null
 
 # Système Anti-Blocage IA
 var _last_unstuck_check_pos: Vector3 = Vector3.ZERO
@@ -64,14 +64,18 @@ func _ready() -> void:
 	stun_health = max_stun_health
 	_last_unstuck_check_pos = global_position
 	
-	# Sécurisation du maillage skinné 3D (extra_cull_margin & matériau PBR opaque)
+	# Évaluation forcée du squelette 3D et du moteur d'animations GLTF ("Idle", "Run", "Walk")
+	var skel := find_child("Skeleton3D", true, false) as Skeleton3D
+	if skel:
+		skel.reset_bone_poses()
+		
+	_glb_anim_player = find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if _glb_anim_player and _glb_anim_player.has_animation("Idle"):
+		_glb_anim_player.play("Idle")
+
 	var mesh_inst := find_child("vanguard_Mesh", true, false) as MeshInstance3D
 	if mesh_inst:
-		mesh_inst.extra_cull_margin = 4.0
-		var skel := mesh_inst.get_node_or_null(mesh_inst.skeleton) as Skeleton3D
-		if skel == null:
-			mesh_inst.skeleton = NodePath("..")
-			
+		mesh_inst.extra_cull_margin = 8.0
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = Color(0.9, 0.2, 0.2, 1.0)
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
@@ -230,11 +234,18 @@ func collapse_from_wall() -> void:
 		_knockback_velocity = -transform.basis.z * 6.0
 
 func _play_anim(anim_name: String) -> void:
-	if _is_dying:
+	if _is_dying or not _glb_anim_player:
 		return
-	if _current_anim != anim_name and anim_player and anim_player.has_animation(anim_name):
-		_current_anim = anim_name
-		anim_player.play(anim_name)
+	var target_anim := "Idle"
+	match anim_name:
+		"run": target_anim = "Run"
+		"walk": target_anim = "Walk"
+		"walk_backward": target_anim = "Walk"
+		"idle": target_anim = "Idle"
+		_: target_anim = "Idle"
+
+	if _glb_anim_player.has_animation(target_anim) and _glb_anim_player.current_animation != target_anim:
+		_glb_anim_player.play(target_anim)
 
 func _physics_process(delta: float) -> void:
 	if _is_dying:
@@ -366,11 +377,7 @@ func _physics_process(delta: float) -> void:
 				var target_vel := dir * active_speed
 				var target_angle := atan2(-dir.x, -dir.z)
 				rotation.y = lerp_angle(rotation.y, target_angle, delta * rotation_speed)
-				
-				if is_limping:
-					_play_anim("pain_limp")
-				else:
-					_play_anim("run")
+				_play_anim("run")
 				
 				if nav_agent.avoidance_enabled:
 					nav_agent.set_velocity(target_vel)
@@ -382,8 +389,7 @@ func _physics_process(delta: float) -> void:
 func _perform_machete_attack(target: Node3D) -> void:
 	if not is_instance_valid(target):
 		return
-	if anim_player and anim_player.has_animation("machete_slash"):
-		anim_player.play("machete_slash")
+	_play_anim("idle")
 	if target.has_method("take_damage"):
 		target.call("take_damage", attack_damage, -transform.basis.z, "")
 
@@ -394,8 +400,7 @@ func _enemy_shoot_target(target: Node3D) -> void:
 	var origin := global_position + Vector3(0, 1.3, 0)
 	var target_pos := target.global_position + Vector3(0, 1.0, 0)
 	
-	if anim_player and anim_player.has_animation("shoot"):
-		anim_player.play("shoot")
+	_play_anim("idle")
 	
 	if target.has_method("take_damage"):
 		target.call("take_damage", attack_damage, Vector3.ZERO, "")
