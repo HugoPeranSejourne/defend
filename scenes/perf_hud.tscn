@@ -22,8 +22,8 @@ script = ExtResource("1_perf_script")
 [node name="TopLeftMargin" type="PanelContainer" parent="."]
 offset_left = 10.0
 offset_top = 10.0
-offset_right = 270.0
-offset_bottom = 255.0
+offset_right = 320.0
+offset_bottom = 280.0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_perf_panel")
 
@@ -36,7 +36,7 @@ theme_override_constants/separation = 3
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
 theme_override_font_sizes/font_size = 12
-text = "PERFORMANCE & MATÉRIEL"
+text = "PERFORMANCE & DIAGNOSTIC 3D"
 
 [node name="FPSLabel" type="Label" parent="TopLeftMargin/VBoxContainer"]
 layout_mode = 2
@@ -67,6 +67,13 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
 theme_override_font_sizes/font_size = 11
 text = "Ennemis : 0 | Soldats : 15"
+
+[node name="Debug3DLogLabel" type="Label" parent="TopLeftMargin/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "[3D DIAG] Diagnostic Rendu En Cours..."
+autowrap_mode = 2
 
 [node name="WarningLabel" type="Label" parent="TopLeftMargin/VBoxContainer"]
 visible = false
