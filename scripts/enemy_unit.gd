@@ -64,11 +64,17 @@ func _ready() -> void:
 	stun_health = max_stun_health
 	_last_unstuck_check_pos = global_position
 	
-	# Appliquer le matériau rouge insurgé sur le modèle 3D humanoïde
+	# Sécurisation du maillage skinné 3D (extra_cull_margin & matériau PBR opaque)
 	var mesh_inst := find_child("vanguard_Mesh", true, false) as MeshInstance3D
 	if mesh_inst:
+		mesh_inst.extra_cull_margin = 4.0
+		var skel := mesh_inst.get_node_or_null(mesh_inst.skeleton) as Skeleton3D
+		if skel == null:
+			mesh_inst.skeleton = NodePath("..")
+			
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = Color(0.9, 0.2, 0.2, 1.0)
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 		mat.roughness = 0.45
 		mesh_inst.material_override = mat
 	

@@ -9,10 +9,6 @@ func _ready() -> void:
 	attack_damage = 35.0
 	attack_rate = 2.2
 	is_melee = false
-	if gun_mesh:
-		gun_mesh.visible = true
-	if machete_mesh:
-		machete_mesh.visible = false
 
 func _physics_process(delta: float) -> void:
 	if _is_dying:

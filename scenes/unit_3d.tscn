@@ -93,7 +93,6 @@ mesh = SubResource("TorusMesh_ring")
 [node name="CharacterPivot" type="Node3D" parent="."]
 
 [node name="SoldierHumanGLB" parent="CharacterPivot" instance=ExtResource("3_soldier_glb")]
-transform = Transform3D(0.01, 0, 0, 0, 0.01, 0, 0, 0, 0.01, 0, 0, 0)
 
 [node name="HeadPivot" type="Node3D" parent="CharacterPivot"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.62, 0)

@@ -43,11 +43,17 @@ func _ready() -> void:
 	health = max_health
 	set_selected(false)
 	
-	# Appliquer le matériau tactique bleu GEO sur le modèle 3D humanoïde
+	# Scurisation du maillage skinn 3D (extra_cull_margin & matriau PBR opaque)
 	var mesh_inst := find_child("vanguard_Mesh", true, false) as MeshInstance3D
 	if mesh_inst:
+		mesh_inst.extra_cull_margin = 4.0
+		var skel := mesh_inst.get_node_or_null(mesh_inst.skeleton) as Skeleton3D
+		if skel == null:
+			mesh_inst.skeleton = NodePath("..")
+			
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = Color(0.2, 0.6, 1.0, 1.0)
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 		mat.roughness = 0.4
 		mesh_inst.material_override = mat
 	
