@@ -120,7 +120,6 @@ character_pivot = NodePath("CharacterPivot")
 [node name="CharacterPivot" type="Node3D" parent="."]
 
 [node name="InsurgentEnemyGLB" parent="CharacterPivot" instance=ExtResource("2_enemy_glb")]
-transform = Transform3D(0.01, 0, 0, 0, 0.01, 0, 0, 0, 0.01, 0, 0, 0)
 
 [node name="ShieldMesh" type="MeshInstance3D" parent="CharacterPivot"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.95, -0.4)

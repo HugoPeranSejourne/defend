@@ -33,9 +33,6 @@ var _glb_anim_player: AnimationPlayer = null
 # Système Anti-Blocage IA
 var _last_unstuck_check_pos: Vector3 = Vector3.ZERO
 var _stuck_timer: float = 0.0
-var _is_unstucking: bool = false
-var _unstuck_duration: float = 0.0
-var _unstuck_dir: Vector3 = Vector3.ZERO
 
 # Système d'Escalade de Barricades Style World War Z
 var is_climbing_wall: bool = false
@@ -64,7 +61,7 @@ func _ready() -> void:
 	stun_health = max_stun_health
 	_last_unstuck_check_pos = global_position
 	
-	# Évaluation forcée du squelette 3D et du moteur d'animations GLTF ("Idle", "Run", "Walk")
+	# Évaluation forcée du squelette 3D et du moteur d'animations GLTF
 	var skel := find_child("Skeleton3D", true, false) as Skeleton3D
 	if skel:
 		skel.reset_bone_poses()
@@ -73,14 +70,16 @@ func _ready() -> void:
 	if _glb_anim_player and _glb_anim_player.has_animation("Idle"):
 		_glb_anim_player.play("Idle")
 
+	# Teinture du matériau d'origine GLTF sans détruire le shader de skinning
 	var mesh_inst := find_child("vanguard_Mesh", true, false) as MeshInstance3D
 	if mesh_inst:
-		mesh_inst.extra_cull_margin = 8.0
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.9, 0.2, 0.2, 1.0)
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
-		mat.roughness = 0.45
-		mesh_inst.material_override = mat
+		mesh_inst.extra_cull_margin = 16.0
+		var orig_mat := mesh_inst.get_active_material(0)
+		if orig_mat and orig_mat is StandardMaterial3D:
+			var mat := orig_mat.duplicate() as StandardMaterial3D
+			mat.albedo_color = Color(0.9, 0.25, 0.25, 1.0)
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+			mesh_inst.set_surface_override_material(0, mat)
 	
 	is_melee = (randf() < 0.7)
 	if is_melee:
@@ -258,16 +257,16 @@ func _physics_process(delta: float) -> void:
 		
 	_knockback_velocity = _knockback_velocity.lerp(Vector3.ZERO, delta * 10.0)
 
-	# 1. Logique d'Escalade de Barricades Style World War Z
+	# 1. Escalade de Barricades
 	if is_climbing_wall:
 		_play_anim("run")
 		global_position.y += delta * 3.5
-		global_position += -transform.basis.z * delta * 1.5
+		global_position += transform.basis.z * delta * 1.5
 		
 		if global_position.y >= _climb_target_y:
 			is_climbing_wall = false
 			global_position.y = 0.0
-			global_position += -transform.basis.z * 2.5
+			global_position += transform.basis.z * 2.5
 			if is_instance_valid(_current_wall) and _current_wall.has_method("unregister_climber"):
 				_current_wall.call("unregister_climber", self)
 				_current_wall = null
@@ -276,47 +275,7 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 
-	# Check de détection des barricades à escalader
-	var barricades := get_tree().get_nodes_in_group("barricades")
-	for b_node in barricades:
-		if is_instance_valid(b_node) and b_node is Node3D:
-			var wall := b_node as Node3D
-			var dist := global_position.distance_to(wall.global_position)
-			if dist <= 2.2:
-				is_climbing_wall = true
-				_current_wall = wall
-				if wall.has_method("register_climber"):
-					wall.call("register_climber", self)
-				var wall_h: float = wall.get("wall_height") if wall.get("wall_height") != null else 3.5
-				_climb_target_y = wall_h + 0.2
-				return
-
-	# 2. Gestion de la manœuvre de déblocage (Anti-Stuck AI)
-	if _is_unstucking:
-		_unstuck_duration -= delta
-		velocity.x = _unstuck_dir.x * (base_move_speed * 0.85) + _knockback_velocity.x
-		velocity.z = _unstuck_dir.z * (base_move_speed * 0.85) + _knockback_velocity.z
-		move_and_slide()
-		_play_anim("walk_backward")
-		if _unstuck_duration <= 0.0:
-			_is_unstucking = false
-			_stuck_timer = 0.0
-			_last_unstuck_check_pos = global_position
-		return
-
-	_stuck_timer += delta
-	if _stuck_timer >= 0.6:
-		var dist_moved := global_position.distance_to(_last_unstuck_check_pos)
-		_last_unstuck_check_pos = global_position
-		_stuck_timer = 0.0
-		
-		if dist_moved < 0.35 and _stagger_timer <= 0.0:
-			_is_unstucking = true
-			_unstuck_duration = 0.85
-			var side := 1.0 if randf() > 0.5 else -1.0
-			_unstuck_dir = (-transform.basis.z * 1.2 + transform.basis.x * (side * 1.5)).normalized()
-			return
-
+	# Recherche de la Base HQ
 	if not is_instance_valid(target_base):
 		var bases := get_tree().get_nodes_in_group("base")
 		if not bases.is_empty():
@@ -338,13 +297,14 @@ func _physics_process(delta: float) -> void:
 
 	var active_speed := get_current_move_speed()
 
+	# Engagement du combat
 	if is_instance_valid(target_to_attack) and closest_dist <= attack_range:
 		velocity.x = _knockback_velocity.x
 		velocity.z = _knockback_velocity.z
 		move_and_slide()
 		
 		var dir := (target_to_attack.global_position - global_position).normalized()
-		var target_angle := atan2(-dir.x, -dir.z)
+		var target_angle := atan2(dir.x, dir.z)
 		rotation.y = lerp_angle(rotation.y, target_angle, delta * rotation_speed)
 		
 		_play_anim("idle")
@@ -365,6 +325,7 @@ func _physics_process(delta: float) -> void:
 		_play_anim("idle")
 		return
 
+	# Navigation vers la Base HQ (Sud : Z = +75)
 	if nav_agent and is_instance_valid(target_base):
 		nav_agent.set_target_position(target_base.global_position)
 		if not nav_agent.is_navigation_finished():
@@ -375,8 +336,9 @@ func _physics_process(delta: float) -> void:
 			if dir.length_squared() > 0.001:
 				dir = dir.normalized()
 				var target_vel := dir * active_speed
-				var target_angle := atan2(-dir.x, -dir.z)
+				var target_angle := atan2(dir.x, dir.z)
 				rotation.y = lerp_angle(rotation.y, target_angle, delta * rotation_speed)
+				
 				_play_anim("run")
 				
 				if nav_agent.avoidance_enabled:
@@ -391,7 +353,7 @@ func _perform_machete_attack(target: Node3D) -> void:
 		return
 	_play_anim("idle")
 	if target.has_method("take_damage"):
-		target.call("take_damage", attack_damage, -transform.basis.z, "")
+		target.call("take_damage", attack_damage, transform.basis.z, "")
 
 func _enemy_shoot_target(target: Node3D) -> void:
 	if not is_instance_valid(target):
@@ -427,7 +389,7 @@ func _create_enemy_laser_tracer(from: Vector3, to: Vector3) -> void:
 	timer.timeout.connect(mesh_instance_line.queue_free)
 
 func _on_velocity_computed(safe_velocity: Vector3) -> void:
-	if not _is_dying and _stagger_timer <= 0.0 and not _is_unstucking and not is_climbing_wall:
+	if not _is_dying and _stagger_timer <= 0.0 and not is_climbing_wall:
 		velocity.x = safe_velocity.x + _knockback_velocity.x
 		velocity.z = safe_velocity.z + _knockback_velocity.z
 		move_and_slide()

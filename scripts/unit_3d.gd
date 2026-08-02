@@ -44,7 +44,7 @@ func _ready() -> void:
 	health = max_health
 	set_selected(false)
 	
-	# Évaluation forcée du squelette 3D et du moteur d'animations GLTF ("Idle", "Run", "Walk")
+	# Évaluation forcée du squelette 3D et du moteur d'animations GLTF
 	var skel := find_child("Skeleton3D", true, false) as Skeleton3D
 	if skel:
 		skel.reset_bone_poses()
@@ -53,14 +53,16 @@ func _ready() -> void:
 	if _glb_anim_player and _glb_anim_player.has_animation("Idle"):
 		_glb_anim_player.play("Idle")
 
+	# Teinture du matériau d'origine GLTF sans détruire le shader de skinning
 	var mesh_inst := find_child("vanguard_Mesh", true, false) as MeshInstance3D
 	if mesh_inst:
-		mesh_inst.extra_cull_margin = 8.0
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.2, 0.6, 1.0, 1.0)
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
-		mat.roughness = 0.4
-		mesh_inst.material_override = mat
+		mesh_inst.extra_cull_margin = 16.0
+		var orig_mat := mesh_inst.get_active_material(0)
+		if orig_mat and orig_mat is StandardMaterial3D:
+			var mat := orig_mat.duplicate() as StandardMaterial3D
+			mat.albedo_color = Color(0.2, 0.6, 1.0, 1.0)
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
+			mesh_inst.set_surface_override_material(0, mat)
 	
 	if nav_agent:
 		nav_agent.avoidance_enabled = true
