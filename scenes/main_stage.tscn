@@ -21,6 +21,7 @@
 [ext_resource type="PackedScene" path="res://scenes/corpse_manager.tscn" id="19_corpse_mgr"]
 [ext_resource type="PackedScene" path="res://scenes/sound_manager.tscn" id="20_sound_mgr"]
 [ext_resource type="PackedScene" path="res://scenes/minimap_hud.tscn" id="21_minimap_hud"]
+[ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="22_pause_menu"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 sky_top_color = Color(0.28, 0.52, 0.88, 1)
@@ -289,3 +290,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 56)
 [node name="PerfHUD" parent="." instance=ExtResource("18_perf_hud")]
 
 [node name="MinimapHUD" parent="." instance=ExtResource("21_minimap_hud")]
+
+[node name="PauseMenu" parent="." instance=ExtResource("22_pause_menu")]

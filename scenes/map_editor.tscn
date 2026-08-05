@@ -1,0 +1,160 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/map_editor.gd" id="1_editor_script"]
+[ext_resource type="Texture2D" path="res://textures/ceuta_pavement_tile.png" id="2_pavement_tex"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_editor"]
+sky_top_color = Color(0.2, 0.45, 0.8, 1)
+sky_horizon_color = Color(0.9, 0.75, 0.5, 1)
+
+[sub_resource type="Sky" id="Sky_editor"]
+sky_material = SubResource("ProceduralSkyMaterial_editor")
+
+[sub_resource type="Environment" id="Environment_editor"]
+background_mode = 2
+sky = SubResource("Sky_editor")
+ambient_light_color = Color(0.5, 0.55, 0.7, 1)
+ambient_light_energy = 1.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_editor_ground"]
+albedo_texture = ExtResource("2_pavement_tex")
+uv1_scale = Vector3(60, 60, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+material = SubResource("StandardMaterial3D_editor_ground")
+size = Vector2(300, 300)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.04, 0.07, 0.12, 0.94)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.8, 1, 0.6)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="MapEditor" type="Node3D"]
+script = ExtResource("1_editor_script")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_editor")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.353, 0.353, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 30, 0)
+light_color = Color(1, 0.9, 0.75, 1)
+shadow_enabled = true
+
+[node name="EditorGround" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="PlacedBlocks" type="Node3D" parent="."]
+
+[node name="EditorCamPivot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15, 30)
+
+[node name="Camera3D" type="Camera3D" parent="EditorCamPivot"]
+transform = Transform3D(1, 0, 0, 0, 0.866, 0.5, 0, -0.5, 0.866, 0, 0, 0)
+fov = 70.0
+far = 2000.0
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="TopBar" type="PanelContainer" parent="UI"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 50.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="HBox" type="HBoxContainer" parent="UI/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="UI/TopBar/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "🛠️ ÉDITEUR 3D"
+
+[node name="VSeparator" type="VSeparator" parent="UI/TopBar/HBox"]
+layout_mode = 2
+
+[node name="MapNameLabel" type="Label" parent="UI/TopBar/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Nom :"
+
+[node name="MapNameInput" type="LineEdit" parent="UI/TopBar/HBox"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+text = "Ma_Carte_Ceuta"
+
+[node name="CategoryLabel" type="Label" parent="UI/TopBar/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Catégorie :"
+
+[node name="CategoryOption" type="OptionButton" parent="UI/TopBar/HBox"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+
+[node name="VSeparator2" type="VSeparator" parent="UI/TopBar/HBox"]
+layout_mode = 2
+
+[node name="SaveButton" type="Button" parent="UI/TopBar/HBox"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.95, 0.4, 1)
+text = "💾 Enregistrer"
+
+[node name="TestMapButton" type="Button" parent="UI/TopBar/HBox"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+text = "⚔️ Tester Carte"
+
+[node name="ClearButton" type="Button" parent="UI/TopBar/HBox"]
+custom_minimum_size = Vector2(90, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+text = "🗑️ Effacer"
+
+[node name="MainMenuButton" type="Button" parent="UI/TopBar/HBox"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+text = "🏠 Menu"
+
+[node name="LeftSidebar" type="PanelContainer" parent="UI"]
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_top = 55.0
+offset_right = 230.0
+offset_bottom = -40.0
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="TabContainer" type="TabContainer" parent="UI/LeftSidebar"]
+layout_mode = 2
+
+[node name="BottomBar" type="PanelContainer" parent="UI"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -36.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="StatusLabel" type="Label" parent="UI/BottomBar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "COMMANDES : [WASD/ZQSD] Déplacer Caméra | [Clic Droit Drag] Orienter Caméra | [Clic Gauche] Placer | [R / Molette] Pivoter | [Suppr] Supprimer"
+horizontal_alignment = 1

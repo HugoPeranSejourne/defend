@@ -1,0 +1,276 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/main_menu.gd" id="1_menu_script"]
+[ext_resource type="PackedScene" path="res://scenes/ceuta_city_backdrop.tscn" id="2_backdrop_scene"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_menu"]
+sky_top_color = Color(0.18, 0.42, 0.78, 1)
+sky_horizon_color = Color(0.95, 0.7, 0.45, 1)
+ground_bottom_color = Color(0.12, 0.14, 0.18, 1)
+
+[sub_resource type="Sky" id="Sky_menu"]
+sky_material = SubResource("ProceduralSkyMaterial_menu")
+
+[sub_resource type="Environment" id="Environment_menu"]
+background_mode = 2
+sky = SubResource("Sky_menu")
+ambient_light_color = Color(0.5, 0.55, 0.7, 1)
+ambient_light_energy = 1.0
+glow_enabled = true
+glow_bloom = 0.2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_menu_panel"]
+bg_color = Color(0.04, 0.07, 0.12, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.2, 0.8, 1, 0.7)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0, 0.8, 1, 0.3)
+shadow_size = 18
+
+[node name="MainMenu" type="Node3D"]
+script = ExtResource("1_menu_script")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_menu")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.353, 0.353, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 20, 0)
+light_color = Color(1, 0.85, 0.65, 1)
+light_energy = 1.5
+shadow_enabled = true
+
+[node name="CeutaCityBackdrop" parent="." instance=ExtResource("2_backdrop_scene")]
+
+[node name="CameraPivot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
+
+[node name="Camera3D" type="Camera3D" parent="CameraPivot"]
+transform = Transform3D(1, 0, 0, 0, 0.939, 0.342, 0, -0.342, 0.939, 0, 12, 65)
+fov = 65.0
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="CenterContainer" type="CenterContainer" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MainPanel" type="PanelContainer" parent="UI/CenterContainer"]
+custom_minimum_size = Vector2(380, 440)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_menu_panel")
+
+[node name="VBox" type="VBoxContainer" parent="UI/CenterContainer/MainPanel"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="UI/CenterContainer/MainPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 28
+text = "DEFEND EUROPE"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="UI/CenterContainer/MainPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "RTS & FPS HYBRIDE • ÉDITION CEUTA 3D"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="UI/CenterContainer/MainPanel/VBox"]
+layout_mode = 2
+
+[node name="PlayButton" type="Button" parent="UI/CenterContainer/MainPanel/VBox"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = "⚔️ LANCER LA PARTIE"
+
+[node name="MapEditorButton" type="Button" parent="UI/CenterContainer/MainPanel/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "🛠️ ÉDITEUR DE CARTES 3D"
+
+[node name="OptionsButton" type="Button" parent="UI/CenterContainer/MainPanel/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "⚙️ RÉGLAGES & OPTIONS"
+
+[node name="CreditsButton" type="Button" parent="UI/CenterContainer/MainPanel/VBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 13
+text = "📜 CRÉDITS & INFOS"
+
+[node name="QuitButton" type="Button" parent="UI/CenterContainer/MainPanel/VBox"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.35, 0.35, 1)
+theme_override_font_sizes/font_size = 13
+text = "❌ QUITTER LE JEU"
+
+[node name="MapSelectorModal" type="PanelContainer" parent="UI/CenterContainer"]
+visible = false
+custom_minimum_size = Vector2(420, 450)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_menu_panel")
+
+[node name="VBox" type="VBoxContainer" parent="UI/CenterContainer/MapSelectorModal"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="UI/CenterContainer/MapSelectorModal/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "CHOIX DE LA CARTE"
+horizontal_alignment = 1
+
+[node name="MapItemList" type="ItemList" parent="UI/CenterContainer/MapSelectorModal/VBox"]
+custom_minimum_size = Vector2(0, 260)
+layout_mode = 2
+
+[node name="LaunchMapButton" type="Button" parent="UI/CenterContainer/MapSelectorModal/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.95, 0.4, 1)
+theme_override_font_sizes/font_size = 14
+text = "▶ COMMENCER LA BATAILLE"
+
+[node name="BackMapButton" type="Button" parent="UI/CenterContainer/MapSelectorModal/VBox"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 12
+text = "⬅ Retour"
+
+[node name="OptionsModal" type="PanelContainer" parent="UI/CenterContainer"]
+visible = false
+custom_minimum_size = Vector2(380, 420)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_menu_panel")
+
+[node name="VBox" type="VBoxContainer" parent="UI/CenterContainer/OptionsModal"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="OptionsTitle" type="Label" parent="UI/CenterContainer/OptionsModal/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "RÉGLAGES ET OPTIONS"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="UI/CenterContainer/OptionsModal/VBox"]
+layout_mode = 2
+
+[node name="MasterVolContainer" type="VBoxContainer" parent="UI/CenterContainer/OptionsModal/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/CenterContainer/OptionsModal/VBox/MasterVolContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Volume Général"
+
+[node name="MasterVolSlider" type="HSlider" parent="UI/CenterContainer/OptionsModal/VBox/MasterVolContainer"]
+layout_mode = 2
+value = 80.0
+
+[node name="SFXVolContainer" type="VBoxContainer" parent="UI/CenterContainer/OptionsModal/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/CenterContainer/OptionsModal/VBox/SFXVolContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Volume Effets Sonores"
+
+[node name="SFXVolSlider" type="HSlider" parent="UI/CenterContainer/OptionsModal/VBox/SFXVolContainer"]
+layout_mode = 2
+value = 90.0
+
+[node name="SensContainer" type="VBoxContainer" parent="UI/CenterContainer/OptionsModal/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/CenterContainer/OptionsModal/VBox/SensContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Sensibilité Souris"
+
+[node name="SensSlider" type="HSlider" parent="UI/CenterContainer/OptionsModal/VBox/SensContainer"]
+layout_mode = 2
+value = 50.0
+
+[node name="FullscreenContainer" type="HBoxContainer" parent="UI/CenterContainer/OptionsModal/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/CenterContainer/OptionsModal/VBox/FullscreenContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Plein Écran"
+
+[node name="FullscreenCheck" type="CheckBox" parent="UI/CenterContainer/OptionsModal/VBox/FullscreenContainer"]
+layout_mode = 2
+
+[node name="BackOptionsButton" type="Button" parent="UI/CenterContainer/OptionsModal/VBox"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "⬅ Retour"
+
+[node name="CreditsModal" type="PanelContainer" parent="UI/CenterContainer"]
+visible = false
+custom_minimum_size = Vector2(380, 320)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_menu_panel")
+
+[node name="VBox" type="VBoxContainer" parent="UI/CenterContainer/CreditsModal"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="UI/CenterContainer/CreditsModal/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "CRÉDITS & PROJET"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="UI/CenterContainer/CreditsModal/VBox"]
+layout_mode = 2
+
+[node name="Text" type="Label" parent="UI/CenterContainer/CreditsModal/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "• Moteur : Godot 4.7 Forward+
+• Développé avec l'assistance d'Antigravity AI (Google Deepmind Team)
+• Style Architectural : Ceuta (Néoclassique & Terracotta)
+• Modèles 3D Humanoïdes : Rigged GLTF 2.0 Vanguard"
+autowrap_mode = 2
+
+[node name="BackCreditsButton" type="Button" parent="UI/CenterContainer/CreditsModal/VBox"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "⬅ Retour"
