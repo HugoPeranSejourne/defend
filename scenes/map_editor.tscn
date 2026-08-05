@@ -1,7 +1,8 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/map_editor.gd" id="1_editor_script"]
 [ext_resource type="Texture2D" path="res://textures/ceuta_pavement_tile.png" id="2_pavement_tex"]
+[ext_resource type="PackedScene" path="res://scenes/shape_context_menu.tscn" id="3_context_scene"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_editor"]
 sky_top_color = Color(0.2, 0.45, 0.8, 1)
@@ -63,6 +64,9 @@ fov = 70.0
 far = 2000.0
 
 [node name="UI" type="CanvasLayer" parent="."]
+
+[node name="ContextMenu" parent="UI" instance=ExtResource("3_context_scene")]
+visible = false
 
 [node name="TopBar" type="PanelContainer" parent="UI"]
 anchors_preset = 10
@@ -172,7 +176,7 @@ text = "📦 Cube / Bâtiment Rectangle"
 [node name="CylBtn" type="Button" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
-text = "🏛️ Cylindre / Tour Rond"
+text = "🏛️ Cylindre / Tour Ronde"
 
 [node name="SphBtn" type="Button" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
 custom_minimum_size = Vector2(0, 34)
@@ -182,7 +186,7 @@ text = "🔮 Sphère / Dôme"
 [node name="PriBtn" type="Button" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
 custom_minimum_size = Vector2(0, 34)
 layout_mode = 2
-text = "📐 Prisme / Toit Reste"
+text = "📐 Prisme / Toit Pente"
 
 [node name="HSeparator" type="HSeparator" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
 layout_mode = 2
@@ -235,60 +239,15 @@ min_value = 1.0
 max_value = 50.0
 value = 6.0
 
-[node name="Textures" type="ScrollContainer" parent="UI/LeftSidebar/TabContainer"]
-visible = false
+[node name="HSeparator2" type="HSeparator" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
 layout_mode = 2
 
-[node name="VBox" type="VBoxContainer" parent="UI/LeftSidebar/TabContainer/Textures"]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="Title" type="Label" parent="UI/LeftSidebar/TabContainer/Textures/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 12
-text = "Peintre & Importer Textures"
-
-[node name="ImportTexBtn" type="Button" parent="UI/LeftSidebar/TabContainer/Textures/VBox"]
-custom_minimum_size = Vector2(0, 36)
+[node name="PlacePrimitiveBtn" type="Button" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.95, 0.4, 1)
-text = "📂 Importer Image (.png/.jpg)"
-
-[node name="TexLabel" type="Label" parent="UI/LeftSidebar/TabContainer/Textures/VBox"]
-layout_mode = 2
-text = "Texture Active :"
-
-[node name="TextureOption" type="OptionButton" parent="UI/LeftSidebar/TabContainer/Textures/VBox"]
-layout_mode = 2
-
-[node name="UVScale" type="HBoxContainer" parent="UI/LeftSidebar/TabContainer/Textures/VBox"]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="UI/LeftSidebar/TabContainer/Textures/VBox/UVScale"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Répétition UV :"
-
-[node name="SpinBox" type="SpinBox" parent="UI/LeftSidebar/TabContainer/Textures/VBox/UVScale"]
-layout_mode = 2
-min_value = 0.5
-max_value = 20.0
-step = 0.5
-value = 2.0
-
-[node name="ColorContainer" type="HBoxContainer" parent="UI/LeftSidebar/TabContainer/Textures/VBox"]
-layout_mode = 2
-
-[node name="Label" type="Label" parent="UI/LeftSidebar/TabContainer/Textures/VBox/ColorContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Teinte Couleur :"
-
-[node name="ColorPickerButton" type="ColorPickerButton" parent="UI/LeftSidebar/TabContainer/Textures/VBox/ColorContainer"]
-custom_minimum_size = Vector2(40, 26)
-layout_mode = 2
-color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 13
+text = "➕ Placer cette Forme 3D"
 
 [node name="Unités" type="ScrollContainer" parent="UI/LeftSidebar/TabContainer"]
 visible = false
@@ -304,6 +263,94 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+
+[node name="TextureModal" type="PanelContainer" parent="UI/CenterContainer"]
+visible = false
+custom_minimum_size = Vector2(360, 360)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="UI/CenterContainer/TextureModal"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="UI/CenterContainer/TextureModal/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "🖼️ IMPORTER & APPLIQUER TEXTURE"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="UI/CenterContainer/TextureModal/VBox"]
+layout_mode = 2
+
+[node name="ImportTexModalBtn" type="Button" parent="UI/CenterContainer/TextureModal/VBox"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.95, 0.4, 1)
+text = "📂 Importer Image (.png / .jpg)"
+
+[node name="TexLabel" type="Label" parent="UI/CenterContainer/TextureModal/VBox"]
+layout_mode = 2
+text = "Choisir la Texture :"
+
+[node name="TextureOption" type="OptionButton" parent="UI/CenterContainer/TextureModal/VBox"]
+layout_mode = 2
+
+[node name="FaceLabel" type="Label" parent="UI/CenterContainer/TextureModal/VBox"]
+layout_mode = 2
+text = "Partie du Bâtiment à Texturer :"
+
+[node name="TargetFaceOption" type="OptionButton" parent="UI/CenterContainer/TextureModal/VBox"]
+layout_mode = 2
+selected = 0
+item_count = 3
+popup/item_0/text = "Toutes les faces (Intégral)"
+popup/item_0/id = 0
+popup/item_1/text = "Murs & Façades (Côtés)"
+popup/item_1/id = 1
+popup/item_2/text = "Toit & Sommet (Haut)"
+popup/item_2/id = 2
+
+[node name="UVScale" type="HBoxContainer" parent="UI/CenterContainer/TextureModal/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/CenterContainer/TextureModal/VBox/UVScale"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Répétition UV :"
+
+[node name="SpinBox" type="SpinBox" parent="UI/CenterContainer/TextureModal/VBox/UVScale"]
+layout_mode = 2
+min_value = 0.5
+max_value = 20.0
+step = 0.5
+value = 2.0
+
+[node name="ColorContainer" type="HBoxContainer" parent="UI/CenterContainer/TextureModal/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/CenterContainer/TextureModal/VBox/ColorContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Teinte Couleur :"
+
+[node name="ColorPickerButton" type="ColorPickerButton" parent="UI/CenterContainer/TextureModal/VBox/ColorContainer"]
+custom_minimum_size = Vector2(40, 26)
+layout_mode = 2
+color = Color(1, 1, 1, 1)
+
+[node name="ApplyTexBtn" type="Button" parent="UI/CenterContainer/TextureModal/VBox"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+text = "✔ Appliquer la Texture"
+
+[node name="CloseTexBtn" type="Button" parent="UI/CenterContainer/TextureModal/VBox"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+text = "❌ Fermer"
 
 [node name="DirectiveModal" type="PanelContainer" parent="UI/CenterContainer"]
 visible = false
@@ -364,7 +411,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
 theme_override_font_sizes/font_size = 12
-text = "COMMANDES : [WASD/ZQSD] Déplacer | [Clic Droit Drag] Orienter | [Clic Gauche] Placer | [R / Molette] Pivoter | [Suppr] Supprimer"
+text = "COMMANDES : [WASD/ZQSD] Déplacer | [Clic Droit Drag] Orienter | [Clic Gauche 3D] Ouvrir Menu Contextuel | [R / Molette] Pivoter"
 horizontal_alignment = 1
 
 [node name="TextureFileDialog" type="FileDialog" parent="UI"]
