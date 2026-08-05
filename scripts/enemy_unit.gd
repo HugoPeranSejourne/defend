@@ -21,6 +21,12 @@ signal enemy_died(enemy: EnemyUnit)
 
 @onready var nav_agent: NavigationAgent3D = $NavigationAgent3D
 
+# Directives Tactiques d'Éditeur
+var tactical_directive: String = "CHARGE_BASE" # CHARGE_BASE, HUNT_ALLIES, AMBUSH, PATROL
+var waypoints: Array = []
+var _current_waypoint_idx: int = 0
+var _is_ambush_triggered: bool = false
+
 var target_base: Node3D = null
 var is_melee: bool = false
 var _attack_cooldown: float = 0.0
@@ -61,7 +67,6 @@ func _ready() -> void:
 	stun_health = max_stun_health
 	_last_unstuck_check_pos = global_position
 	
-	# Évaluation forcée du squelette 3D et du moteur d'animations GLTF
 	var skel := find_child("Skeleton3D", true, false) as Skeleton3D
 	if skel:
 		skel.reset_bone_poses()
@@ -70,7 +75,6 @@ func _ready() -> void:
 	if _glb_anim_player and _glb_anim_player.has_animation("Idle"):
 		_glb_anim_player.play("Idle")
 
-	# Teinture du matériau d'origine GLTF sans détruire le shader de skinning
 	var mesh_inst := find_child("vanguard_Mesh", true, false) as MeshInstance3D
 	if mesh_inst:
 		mesh_inst.extra_cull_margin = 16.0
@@ -98,6 +102,12 @@ func _ready() -> void:
 		
 	_play_anim("idle")
 
+func set_directive(dir: String, waypoints_list: Array = []) -> void:
+	tactical_directive = dir
+	waypoints = waypoints_list
+	_current_waypoint_idx = 0
+	_is_ambush_triggered = (dir != "AMBUSH")
+
 func get_current_move_speed() -> float:
 	return base_move_speed * 0.5 if is_limping else base_move_speed
 
@@ -109,6 +119,8 @@ func set_target_base(base_node: Node3D) -> void:
 func take_damage(amount: float, bullet_dir: Vector3 = Vector3.ZERO, body_part: String = "") -> void:
 	if _is_dying:
 		return
+
+	_is_ambush_triggered = true # Déclenche l'embuscade s'il prend un coup
 
 	if body_part == "":
 		var parts: Array = BODY_PART_MULTIPLIERS.keys()
@@ -139,6 +151,8 @@ func take_damage(amount: float, bullet_dir: Vector3 = Vector3.ZERO, body_part: S
 func take_non_lethal_damage(amount: float, bullet_dir: Vector3 = Vector3.ZERO) -> void:
 	if _is_dying:
 		return
+
+	_is_ambush_triggered = true
 
 	stun_health = max(0.0, stun_health - amount)
 	
@@ -257,7 +271,19 @@ func _physics_process(delta: float) -> void:
 		
 	_knockback_velocity = _knockback_velocity.lerp(Vector3.ZERO, delta * 10.0)
 
-	# 1. Escalade de Barricades
+	# Gestion d'embuscade
+	if tactical_directive == "AMBUSH" and not _is_ambush_triggered:
+		var units_close := get_tree().get_nodes_in_group("units")
+		for u in units_close:
+			if is_instance_valid(u) and u is Node3D:
+				if global_position.distance_to((u as Node3D).global_position) <= 12.0:
+					_is_ambush_triggered = true
+					break
+		if not _is_ambush_triggered:
+			_play_anim("idle")
+			return
+
+	# Escalade de Barricades
 	if is_climbing_wall:
 		_play_anim("run")
 		global_position.y += delta * 3.5
@@ -325,9 +351,16 @@ func _physics_process(delta: float) -> void:
 		_play_anim("idle")
 		return
 
-	# Navigation vers la Base HQ (Sud : Z = +75)
-	if nav_agent and is_instance_valid(target_base):
-		nav_agent.set_target_position(target_base.global_position)
+	# Navigation vers la Base HQ ou Waypoint
+	var dest_pos := target_base.global_position if is_instance_valid(target_base) else global_position
+	if tactical_directive == "PATROL" and not waypoints.is_empty():
+		dest_pos = waypoints[_current_waypoint_idx]
+		if global_position.distance_to(dest_pos) <= 1.2:
+			_current_waypoint_idx = (_current_waypoint_idx + 1) % waypoints.size()
+			dest_pos = waypoints[_current_waypoint_idx]
+
+	if nav_agent:
+		nav_agent.set_target_position(dest_pos)
 		if not nav_agent.is_navigation_finished():
 			var next_pos := nav_agent.get_next_path_position()
 			var dir := (next_pos - global_position)

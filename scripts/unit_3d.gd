@@ -29,6 +29,11 @@ signal unit_deselected(unit: Unit3D)
 
 @onready var nav_agent: NavigationAgent3D = $NavigationAgent3D
 
+# Directives Tactiques d'Éditeur
+var tactical_directive: String = "GUARD" # GUARD, PATROL, ATTACK_MOVE, SNIPER_POST
+var waypoints: Array = []
+var _current_waypoint_idx: int = 0
+
 var is_selected: bool = false
 var is_fps_controlled: bool = false
 var _auto_shoot_timer: float = 0.0
@@ -67,6 +72,15 @@ func _ready() -> void:
 	if hud and hud is Control:
 		_fps_hud_node = hud as Control
 		_fps_hud_node.visible = false
+
+func set_directive(dir: String, waypoints_list: Array = []) -> void:
+	tactical_directive = dir
+	waypoints = waypoints_list
+	_current_waypoint_idx = 0
+	
+	if tactical_directive == "SNIPER_POST":
+		auto_attack_range = 50.0
+		auto_attack_damage = 35.0
 
 func _play_human_anim(anim_name: String) -> void:
 	if _is_dying or not _glb_anim_player:
@@ -287,6 +301,7 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 
+	# Recherche d'ennemis
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	var closest_enemy: Node3D = null
 	var min_dist: float = 99999.0
@@ -308,6 +323,15 @@ func _physics_process(delta: float) -> void:
 		if _auto_shoot_timer <= 0.0:
 			_auto_shoot_timer = auto_attack_cooldown
 			_auto_shoot_at_target(closest_enemy)
+
+	# Gestion des Ordres Tactiques (PATROL / ATTACK_MOVE)
+	if tactical_directive == "PATROL" and not waypoints.is_empty():
+		var target_wpt: Vector3 = waypoints[_current_waypoint_idx]
+		if global_position.distance_to(target_wpt) <= 1.2:
+			_current_waypoint_idx = (_current_waypoint_idx + 1) % waypoints.size()
+			target_wpt = waypoints[_current_waypoint_idx]
+		if nav_agent:
+			nav_agent.set_target_position(target_wpt)
 
 	if nav_agent and not nav_agent.is_navigation_finished():
 		var next_pos := nav_agent.get_next_path_position()

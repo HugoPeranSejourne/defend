@@ -7,7 +7,7 @@ static func ensure_maps_dir() -> void:
 	if not DirAccess.dir_exists_absolute(MAPS_DIR):
 		DirAccess.make_dir_recursive_absolute(MAPS_DIR)
 
-static func save_map(map_name: String, category: String, author: String, blocks_data: Array) -> String:
+static func save_map(map_name: String, category: String, author: String, blocks_data: Array, primitives_data: Array = [], units_data: Array = []) -> String:
 	ensure_maps_dir()
 	
 	var clean_name := map_name.strip_edges().validate_filename()
@@ -21,7 +21,9 @@ static func save_map(map_name: String, category: String, author: String, blocks_
 		"category": category,
 		"author": author if author != "" else "Joueur",
 		"created_at": Time.get_datetime_string_from_system(),
-		"blocks": blocks_data
+		"blocks": blocks_data,
+		"primitives": primitives_data,
+		"units": units_data
 	}
 	
 	var json_str := JSON.stringify(map_dict, "\t")

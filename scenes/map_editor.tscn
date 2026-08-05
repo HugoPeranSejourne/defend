@@ -52,6 +52,8 @@ mesh = SubResource("PlaneMesh_ground")
 
 [node name="PlacedBlocks" type="Node3D" parent="."]
 
+[node name="WaypointsContainer" type="Node3D" parent="."]
+
 [node name="EditorCamPivot" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 15, 30)
 
@@ -77,7 +79,7 @@ theme_override_constants/separation = 12
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
 theme_override_font_sizes/font_size = 14
-text = "🛠️ ÉDITEUR 3D"
+text = "🛠️ ÉDITEUR 3D SUR-MESURE"
 
 [node name="VSeparator" type="VSeparator" parent="UI/TopBar/HBox"]
 layout_mode = 2
@@ -134,13 +136,219 @@ text = "🏠 Menu"
 anchors_preset = 9
 anchor_bottom = 1.0
 offset_top = 55.0
-offset_right = 230.0
+offset_right = 260.0
 offset_bottom = -40.0
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="TabContainer" type="TabContainer" parent="UI/LeftSidebar"]
 layout_mode = 2
+
+[node name="Bâtiments" type="ScrollContainer" parent="UI/LeftSidebar/TabContainer"]
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="UI/LeftSidebar/TabContainer/Bâtiments"]
+layout_mode = 2
+
+[node name="Formes3D" type="ScrollContainer" parent="UI/LeftSidebar/TabContainer"]
+visible = false
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="UI/LeftSidebar/TabContainer/Formes3D"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "Formes 3D Primitives"
+
+[node name="BoxBtn" type="Button" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+text = "📦 Cube / Bâtiment Rectangle"
+
+[node name="CylBtn" type="Button" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+text = "🏛️ Cylindre / Tour Rond"
+
+[node name="SphBtn" type="Button" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+text = "🔮 Sphère / Dôme"
+
+[node name="PriBtn" type="Button" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+text = "📐 Prisme / Toit Reste"
+
+[node name="HSeparator" type="HSeparator" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
+layout_mode = 2
+
+[node name="DimTitle" type="Label" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 0.95, 1)
+theme_override_font_sizes/font_size = 11
+text = "Dimensions (Mètres) :"
+
+[node name="SizeX" type="HBoxContainer" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox/SizeX"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Largeur X :"
+
+[node name="SpinBox" type="SpinBox" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox/SizeX"]
+layout_mode = 2
+min_value = 1.0
+max_value = 50.0
+value = 6.0
+
+[node name="SizeY" type="HBoxContainer" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox/SizeY"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Hauteur Y :"
+
+[node name="SpinBox" type="SpinBox" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox/SizeY"]
+layout_mode = 2
+min_value = 1.0
+max_value = 80.0
+value = 8.0
+
+[node name="SizeZ" type="HBoxContainer" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox/SizeZ"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Profondeur Z :"
+
+[node name="SpinBox" type="SpinBox" parent="UI/LeftSidebar/TabContainer/Formes3D/VBox/SizeZ"]
+layout_mode = 2
+min_value = 1.0
+max_value = 50.0
+value = 6.0
+
+[node name="Textures" type="ScrollContainer" parent="UI/LeftSidebar/TabContainer"]
+visible = false
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="UI/LeftSidebar/TabContainer/Textures"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="UI/LeftSidebar/TabContainer/Textures/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "Peintre & Importer Textures"
+
+[node name="ImportTexBtn" type="Button" parent="UI/LeftSidebar/TabContainer/Textures/VBox"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.95, 0.4, 1)
+text = "📂 Importer Image (.png/.jpg)"
+
+[node name="TexLabel" type="Label" parent="UI/LeftSidebar/TabContainer/Textures/VBox"]
+layout_mode = 2
+text = "Texture Active :"
+
+[node name="TextureOption" type="OptionButton" parent="UI/LeftSidebar/TabContainer/Textures/VBox"]
+layout_mode = 2
+
+[node name="UVScale" type="HBoxContainer" parent="UI/LeftSidebar/TabContainer/Textures/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/LeftSidebar/TabContainer/Textures/VBox/UVScale"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Répétition UV :"
+
+[node name="SpinBox" type="SpinBox" parent="UI/LeftSidebar/TabContainer/Textures/VBox/UVScale"]
+layout_mode = 2
+min_value = 0.5
+max_value = 20.0
+step = 0.5
+value = 2.0
+
+[node name="ColorContainer" type="HBoxContainer" parent="UI/LeftSidebar/TabContainer/Textures/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/LeftSidebar/TabContainer/Textures/VBox/ColorContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Teinte Couleur :"
+
+[node name="ColorPickerButton" type="ColorPickerButton" parent="UI/LeftSidebar/TabContainer/Textures/VBox/ColorContainer"]
+custom_minimum_size = Vector2(40, 26)
+layout_mode = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Unités" type="ScrollContainer" parent="UI/LeftSidebar/TabContainer"]
+visible = false
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="UI/LeftSidebar/TabContainer/Unités"]
+layout_mode = 2
+
+[node name="CenterContainer" type="CenterContainer" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="DirectiveModal" type="PanelContainer" parent="UI/CenterContainer"]
+visible = false
+custom_minimum_size = Vector2(360, 320)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBox" type="VBoxContainer" parent="UI/CenterContainer/DirectiveModal"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="UI/CenterContainer/DirectiveModal/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 16
+text = "📋 DIRECTIVES & ORDRES D'UNITÉ"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="UI/CenterContainer/DirectiveModal/VBox"]
+layout_mode = 2
+
+[node name="DirLabel" type="Label" parent="UI/CenterContainer/DirectiveModal/VBox"]
+layout_mode = 2
+text = "Ordre Tactique :"
+
+[node name="DirectiveOption" type="OptionButton" parent="UI/CenterContainer/DirectiveModal/VBox"]
+layout_mode = 2
+
+[node name="AddWaypointBtn" type="Button" parent="UI/CenterContainer/DirectiveModal/VBox"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.95, 0.4, 1)
+text = "🚩 Poser un Waypoint 3D au Clic"
+
+[node name="ClearWaypointsBtn" type="Button" parent="UI/CenterContainer/DirectiveModal/VBox"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.4, 0.4, 1)
+text = "🗑️ Effacer les Waypoints"
+
+[node name="CloseDirectiveBtn" type="Button" parent="UI/CenterContainer/DirectiveModal/VBox"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+text = "✔ Valider & Fermer"
 
 [node name="BottomBar" type="PanelContainer" parent="UI"]
 anchors_preset = 12
@@ -156,5 +364,13 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 layout_mode = 2
 theme_override_colors/font_color = Color(0.3, 0.9, 1, 1)
 theme_override_font_sizes/font_size = 12
-text = "COMMANDES : [WASD/ZQSD] Déplacer Caméra | [Clic Droit Drag] Orienter Caméra | [Clic Gauche] Placer | [R / Molette] Pivoter | [Suppr] Supprimer"
+text = "COMMANDES : [WASD/ZQSD] Déplacer | [Clic Droit Drag] Orienter | [Clic Gauche] Placer | [R / Molette] Pivoter | [Suppr] Supprimer"
 horizontal_alignment = 1
+
+[node name="TextureFileDialog" type="FileDialog" parent="UI"]
+title = "Choisir une image de texture (.png, .jpg)"
+size = Vector2i(700, 500)
+ok_button_text = "Ouvrir"
+file_mode = 0
+access = 2
+filters = PackedStringArray("*.png, *.jpg, *.jpeg ; Images Textures")
