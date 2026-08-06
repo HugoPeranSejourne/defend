@@ -35,21 +35,16 @@ func _ready() -> void:
 	_check_and_load_custom_map()
 
 func _check_and_load_custom_map() -> void:
-	var custom_map_path: String = ProjectSettings.get_setting("game/custom_map_path", "")
+	var custom_map_path: String = GameState.pending_map_path if GameState and GameState.pending_map_path != "" else ProjectSettings.get_setting("game/custom_map_path", "")
 	if custom_map_path != "" and FileAccess.file_exists(custom_map_path):
-		print("[MAIN STAGE] Chargement de la carte personnalisée : ", custom_map_path)
-		var map_data := MapSerializer.load_map(custom_map_path)
-		if not map_data.is_empty():
+		print("[MAIN STAGE] Chargement de la carte personnalisée v2 : ", custom_map_path)
+		var v2_data := MapIO.load_map(custom_map_path)
+		if v2_data != null:
 			var custom_container := Node3D.new()
 			custom_container.name = "CustomMapContainer"
 			add_child(custom_container)
-			
-			if map_data.has("blocks"):
-				_build_custom_blocks(map_data["blocks"] as Array, custom_container)
-			if map_data.has("primitives"):
-				_build_custom_primitives(map_data["primitives"] as Array, custom_container)
-			if map_data.has("units"):
-				_build_custom_units(map_data["units"] as Array, custom_container)
+			var catalog := BlockCatalog.create_default()
+			MapRuntime.spawn_into(v2_data, custom_container, catalog, 1) # Layer 1 = Physique de jeu
 
 func _build_custom_blocks(blocks: Array, parent: Node3D) -> void:
 	for b in blocks:

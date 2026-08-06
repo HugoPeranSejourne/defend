@@ -110,7 +110,7 @@ func _on_launch_map_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/main_stage.tscn")
 
 func _on_editor_pressed() -> void:
-	var editor_path := "res://scenes/map_editor.tscn"
+	var editor_path := "res://map_editor/map_editor.tscn"
 	if ResourceLoader.exists(editor_path):
 		get_tree().change_scene_to_file(editor_path)
 
