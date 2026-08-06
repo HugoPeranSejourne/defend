@@ -209,7 +209,7 @@ func _select_primitive_type(type: String) -> void:
 	_selected_primitive_type = type
 	_current_edit_mode = EditMode.PLACE_PRIMITIVE
 	_update_ghost_instance()
-	if status_label: status_label.text = "Forme choisie : " + type.capitalize() + ". Mode placement actif (curseur)"
+	if status_label: status_label.text = "Forme choisie : " + type.capitalize() + ". Mode placement actif ! Déplacez la souris et cliquez sur le sol 3D pour poser."
 
 func _on_place_primitive_clicked() -> void:
 	_current_edit_mode = EditMode.PLACE_PRIMITIVE
@@ -296,7 +296,6 @@ func _create_primitive_mesh_node(type: String, size_v: Vector3) -> Node3D:
 		
 	mi.material_override = mat
 	
-	# Ajouter un StaticBody3D avec CollisionShape3D pour pouvoir cliquer dessus en 3D !
 	var static_body := StaticBody3D.new()
 	static_body.name = "StaticBody3D"
 	var col_shape := CollisionShape3D.new()
@@ -374,6 +373,9 @@ func _cancel_edit_mode() -> void:
 	if status_label: status_label.text = "Mode Édition neutre."
 
 func _is_mouse_over_ui() -> bool:
+	var hovered := get_viewport().gui_get_hovered_control()
+	if hovered != null:
+		return true
 	var m_pos := get_viewport().get_mouse_position()
 	return m_pos.x < 260.0 or m_pos.y < 50.0
 
