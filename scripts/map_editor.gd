@@ -20,8 +20,8 @@ extends Node3D
 @onready var size_y_spin: SpinBox = $UI/LeftSidebar/TabContainer/Formes3D/VBox/SizeY/SpinBox
 @onready var size_z_spin: SpinBox = $UI/LeftSidebar/TabContainer/Formes3D/VBox/SizeZ/SpinBox
 
-# Menu Contextuel 3D
-@onready var context_menu: PanelContainer = $UI/ContextMenu
+# Menu Contextuel 3D avec typage fort ShapeContextMenu
+@onready var context_menu: ShapeContextMenu = $UI/ContextMenu
 
 # Modal Textures & Surfaces
 @onready var texture_modal: PanelContainer = $UI/CenterContainer/TextureModal
@@ -88,6 +88,7 @@ var _cam_speed: float = 25.0
 var _is_rotating_cam: bool = false
 
 func _ready() -> void:
+	print("[MAP EDITOR] *** INITIALISATION DU SCRIPT MAP EDITOR ***")
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	
 	if directive_modal: directive_modal.visible = false
@@ -116,11 +117,13 @@ func _ready() -> void:
 	if clear_waypoints_btn: clear_waypoints_btn.pressed.connect(_clear_active_unit_waypoints)
 	if directive_option: directive_option.item_selected.connect(_on_directive_selected)
 
-	# Signaux du Menu Contextuel 3D
+	# Signaux du Menu Contextuel 3D (Connexion dynamique sécurisée)
 	if context_menu:
-		context_menu.action_move.connect(_on_context_move)
-		context_menu.action_texture.connect(_on_context_texture)
-		context_menu.action_delete.connect(_on_context_delete)
+		context_menu.connect("action_move", _on_context_move)
+		context_menu.connect("action_texture", _on_context_texture)
+		context_menu.connect("action_resize", _on_context_resize)
+		context_menu.connect("action_delete", _on_context_delete)
+		context_menu.connect("action_directive", _open_directive_modal)
 
 	if status_label: status_label.text = "Éditeur 3D prêt. Choisissez une forme 3D, un bâtiment ou une unité."
 
@@ -319,7 +322,6 @@ func _apply_ghost_material(node: Node) -> void:
 	for child in node.get_children():
 		_apply_ghost_material(child)
 
-# Guard de saisie clavier pour empêcher WASD de déplacer la caméra pendant la frappe
 func _ui_has_keyboard_focus() -> bool:
 	var f := get_viewport().gui_get_focus_owner()
 	return f is LineEdit or f is TextEdit or f is SpinBox
@@ -347,7 +349,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_RIGHT:
 			if event.pressed:
-				# Arbitrage Clic Droit : Annule le mode placement si actif, sinon fait tourner la caméra
 				if _current_edit_mode != EditMode.IDLE:
 					_cancel_edit_mode()
 					get_viewport().set_input_as_handled()
@@ -404,7 +405,6 @@ func _is_mouse_over_ui() -> bool:
 		h = h.get_parent()
 	return false
 
-# Intersection Analytique avec le plan Y=0 pour éviter tout bogue d'auto-intersection physique
 func _get_analytical_grid_hit(m_pos: Vector2) -> Vector3:
 	if not camera:
 		return Vector3.ZERO
@@ -442,7 +442,7 @@ func _try_open_context_menu_at_mouse() -> void:
 				context_menu.call("open_at_mouse", _active_edited_node, m_pos)
 
 func _place_current_object() -> void:
-	if not _ghost_instance: return
+	if not _ghost_instance and _current_edit_mode != EditMode.ADD_WAYPOINT: return
 	
 	match _current_edit_mode:
 		EditMode.PLACE_PREFAB:
@@ -486,6 +486,25 @@ func _place_current_object() -> void:
 				_reposition_target_node = null
 				if status_label: status_label.text = "Forme replacée avec succès !"
 
+		EditMode.ADD_WAYPOINT:
+			if _active_edited_node:
+				var m_pos := get_viewport().get_mouse_position()
+				var hit_pos := _get_analytical_grid_hit(m_pos)
+				
+				var w_wpt_scn := load("res://scenes/waypoint_marker.tscn") as PackedScene
+				if w_wpt_scn:
+					var wpt_marker := w_wpt_scn.instantiate() as Node3D
+					waypoints_container.add_child(wpt_marker)
+					wpt_marker.global_position = hit_pos
+				
+				var waypoints_list: Array = _active_edited_node.get_meta("waypoints") if _active_edited_node.has_meta("waypoints") else []
+				waypoints_list.append([hit_pos.x, hit_pos.y, hit_pos.z])
+				_active_edited_node.set_meta("waypoints", waypoints_list)
+				
+				if status_label:
+					status_label.text = "🚩 Waypoint %d posé avec succès !" % waypoints_list.size()
+			return # Ne PAS annuler le mode placement afin de pouvoir poser d'autres waypoints !
+
 	_cancel_edit_mode()
 
 # Actions du Menu Contextuel
@@ -500,6 +519,12 @@ func _on_context_texture(target: Node3D) -> void:
 	if texture_modal:
 		texture_modal.visible = true
 		_update_texture_dropdown()
+
+func _on_context_resize(target: Node3D) -> void:
+	_active_edited_node = target
+	if tab_container:
+		tab_container.current_tab = 1 # Onglet Formes3D
+	if status_label: status_label.text = "📐 Redimensionnez la forme dans l'onglet Formes 3D et cliquez sur Placer."
 
 func _on_context_delete(target: Node3D) -> void:
 	if target:

@@ -1,9 +1,11 @@
 extends PanelContainer
+class_name ShapeContextMenu
 
 signal action_move(target_node: Node3D)
 signal action_texture(target_node: Node3D)
 signal action_resize(target_node: Node3D)
 signal action_delete(target_node: Node3D)
+signal action_directive(target_node: Node3D)
 
 @onready var title_label: Label = $VBox/TitleLabel
 @onready var move_btn: Button = $VBox/MoveBtn
@@ -27,15 +29,25 @@ func open_at_mouse(target: Node3D, mouse_pos: Vector2) -> void:
 	if not _target_node: return
 	
 	var node_title := _target_node.name
+	var is_unit := false
+	
 	if _target_node.has_meta("primitive_type"):
 		node_title = "Forme " + str(_target_node.get_meta("primitive_type")).capitalize()
 	elif _target_node.has_meta("block_key"):
 		node_title = str(_target_node.get_meta("block_key")).capitalize()
 	elif _target_node.has_meta("unit_key"):
 		node_title = "Unité " + str(_target_node.get_meta("unit_key")).capitalize()
+		is_unit = true
 		
 	if title_label:
 		title_label.text = "📍 " + node_title
+		
+	# Si c'est une unité, adapter le libellé du bouton texture/directive
+	if texture_btn:
+		if is_unit:
+			texture_btn.text = "📋 Ordres & Directives"
+		else:
+			texture_btn.text = "🖼️ Importer / Texturer"
 		
 	position = mouse_pos
 	visible = true
@@ -51,7 +63,10 @@ func _on_move_pressed() -> void:
 
 func _on_texture_pressed() -> void:
 	if _target_node:
-		emit_signal("action_texture", _target_node)
+		if _target_node.has_meta("unit_key"):
+			emit_signal("action_directive", _target_node)
+		else:
+			emit_signal("action_texture", _target_node)
 	hide_menu()
 
 func _on_resize_pressed() -> void:
