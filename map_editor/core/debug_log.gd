@@ -14,11 +14,7 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute("user://")
 	_file = FileAccess.open(LOG_FILE, FileAccess.WRITE)
 	_log("=== SESSION %s ===" % Time.get_datetime_string_from_system())
-	_log("Godot %s | %s | %s" % [
-		Engine.get_version_info().string,
-		OS.get_name(),
-		RenderingServer.get_video_adapter_name() if RenderingServer.get_video_adapter_name() != "" else "GPU inconnu"
-	])
+	_log("Godot %s | %s" % [Engine.get_version_info().string, OS.get_name()])
 	_build_overlay()
 
 func _log(msg: String) -> void:
@@ -36,13 +32,12 @@ func log_msg(msg: String) -> void:
 	_log(msg)
 
 func log_error(msg: String) -> void:
-	_log("❌ ERROR: " + msg)
+	_log("ERROR: " + msg)
 
 func log_warn(msg: String) -> void:
-	_log("⚠ WARN: " + msg)
+	_log("WARN: " + msg)
 
 func _input(event: InputEvent) -> void:
-	# F12 = toggle overlay de debug en jeu
 	if event is InputEventKey and event.pressed and event.keycode == KEY_F12:
 		_overlay_visible = not _overlay_visible
 		_overlay.visible = _overlay_visible
@@ -58,7 +53,7 @@ func get_recent(lines := 50) -> String:
 
 func _build_overlay() -> void:
 	var layer := CanvasLayer.new()
-	layer.layer = 128  # au-dessus de tout
+	layer.layer = 128
 	add_child(layer)
 	_overlay = RichTextLabel.new()
 	_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -69,5 +64,4 @@ func _build_overlay() -> void:
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0, 0, 0, 0.85)
 	_overlay.add_theme_stylebox_override("normal", style)
-	_overlay.add_theme_font_size_override("normal_font_size", 12)
 	layer.add_child(_overlay)
