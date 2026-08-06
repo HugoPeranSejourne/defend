@@ -415,6 +415,7 @@ text = "COMMANDES : [WASD/ZQSD] Déplacer | [Clic Droit Drag] Orienter | [Clic G
 horizontal_alignment = 1
 
 [node name="TextureFileDialog" type="FileDialog" parent="UI"]
+visible = false
 title = "Choisir une image de texture (.png, .jpg)"
 size = Vector2i(700, 500)
 ok_button_text = "Ouvrir"

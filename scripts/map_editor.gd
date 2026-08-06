@@ -92,19 +92,23 @@ func _ready() -> void:
 	
 	if directive_modal: directive_modal.visible = false
 	if texture_modal: texture_modal.visible = false
+	if file_dialog: file_dialog.visible = false
+	if context_menu: context_menu.visible = false
 	
 	_populate_category_options()
 	_populate_sidebar_tabs()
 	_update_texture_dropdown()
 	
+	# Connexions garanties des boutons de la barre supérieure
 	if save_btn: save_btn.pressed.connect(_on_save_pressed)
 	if test_map_btn: test_map_btn.pressed.connect(_on_test_map_pressed)
 	if clear_btn: clear_btn.pressed.connect(_on_clear_pressed)
 	if main_menu_btn: main_menu_btn.pressed.connect(_on_main_menu_pressed)
 	if place_primitive_btn: place_primitive_btn.pressed.connect(_on_place_primitive_clicked)
 	
+	# Connexions garanties des modaux
 	if file_dialog: file_dialog.file_selected.connect(_on_texture_file_selected)
-	if import_tex_modal_btn: import_tex_modal_btn.pressed.connect(func(): file_dialog.popup_centered(Vector2i(700, 500)))
+	if import_tex_modal_btn: import_tex_modal_btn.pressed.connect(_open_file_dialog)
 	if apply_tex_btn: apply_tex_btn.pressed.connect(_apply_texture_to_active_node)
 	if close_tex_btn: close_tex_btn.pressed.connect(func(): texture_modal.visible = false)
 
@@ -118,6 +122,13 @@ func _ready() -> void:
 		context_menu.action_move.connect(_on_context_move)
 		context_menu.action_texture.connect(_on_context_texture)
 		context_menu.action_delete.connect(_on_context_delete)
+
+	if status_label: status_label.text = "Éditeur 3D prêt. Choisissez une forme 3D, un bâtiment ou une unité."
+
+func _open_file_dialog() -> void:
+	if file_dialog:
+		file_dialog.visible = true
+		file_dialog.popup_centered(Vector2i(750, 520))
 
 func _populate_category_options() -> void:
 	if not category_option: return
@@ -192,22 +203,24 @@ func _select_prefab(key: String) -> void:
 	_current_edit_mode = EditMode.PLACE_PREFAB
 	_selected_prefab_key = key
 	_update_ghost_instance()
-	if status_label: status_label.text = "Mode placement : Cliquez pour poser " + PREFAB_CATALOG[key]["name"]
+	if status_label: status_label.text = "Mode placement : Cliquez sur la carte pour poser " + PREFAB_CATALOG[key]["name"]
 
 func _select_primitive_type(type: String) -> void:
 	_selected_primitive_type = type
-	if status_label: status_label.text = "Forme choisie : " + type.capitalize() + ". Cliquez sur '➕ Placer cette Forme 3D' pour commencer."
+	_current_edit_mode = EditMode.PLACE_PRIMITIVE
+	_update_ghost_instance()
+	if status_label: status_label.text = "Forme choisie : " + type.capitalize() + ". Mode placement actif (curseur)"
 
 func _on_place_primitive_clicked() -> void:
 	_current_edit_mode = EditMode.PLACE_PRIMITIVE
 	_update_ghost_instance()
-	if status_label: status_label.text = "Mode placement actif ! Déplacez votre souris sur la grille et cliquez pour poser la forme."
+	if status_label: status_label.text = "Mode placement actif ! Déplacez votre souris sur la grille et cliquez pour poser la forme 3D."
 
 func _select_unit_type(key: String) -> void:
 	_current_edit_mode = EditMode.PLACE_UNIT
 	_selected_unit_type = key
 	_update_ghost_instance()
-	if status_label: status_label.text = "Mode placement : Cliquez pour poser " + UNIT_CATALOG[key]["name"]
+	if status_label: status_label.text = "Mode placement : Cliquez sur la carte pour poser " + UNIT_CATALOG[key]["name"]
 
 func _update_ghost_instance() -> void:
 	if _ghost_instance:
@@ -282,7 +295,20 @@ func _create_primitive_mesh_node(type: String, size_v: Vector3) -> Node3D:
 		mat.albedo_color = color_picker_btn.color
 		
 	mi.material_override = mat
-	return mi
+	
+	# Ajouter un StaticBody3D avec CollisionShape3D pour pouvoir cliquer dessus en 3D !
+	var static_body := StaticBody3D.new()
+	static_body.name = "StaticBody3D"
+	var col_shape := CollisionShape3D.new()
+	var box_shape := BoxShape3D.new()
+	box_shape.size = size_v
+	col_shape.shape = box_shape
+	static_body.add_child(col_shape)
+	
+	var container := Node3D.new()
+	container.add_child(mi)
+	container.add_child(static_body)
+	return container
 
 func _apply_ghost_material(node: Node) -> void:
 	var mat := StandardMaterial3D.new()
@@ -397,6 +423,7 @@ func _place_current_object() -> void:
 				block.global_position = _ghost_instance.global_position
 				block.rotation_degrees.y = _current_rot_y
 				block.set_meta("block_key", _selected_prefab_key)
+				if status_label: status_label.text = "Bâtiment posé avec succès !"
 
 		EditMode.PLACE_PRIMITIVE:
 			var prim := _create_primitive_mesh_node(_selected_primitive_type, _get_primitive_size())
@@ -406,6 +433,7 @@ func _place_current_object() -> void:
 			prim.set_meta("primitive_type", _selected_primitive_type)
 			prim.set_meta("primitive_size", [_get_primitive_size().x, _get_primitive_size().y, _get_primitive_size().z])
 			prim.set_meta("texture_path", _active_texture_path)
+			if status_label: status_label.text = "Forme 3D posée avec succès !"
 
 		EditMode.PLACE_UNIT:
 			var u_path: String = UNIT_CATALOG[_selected_unit_type]["scene"]
@@ -418,12 +446,14 @@ func _place_current_object() -> void:
 				unit.set_meta("unit_key", _selected_unit_type)
 				unit.set_meta("directive", "GUARD" if not UNIT_CATALOG[_selected_unit_type]["is_enemy"] else "CHARGE_BASE")
 				unit.set_meta("waypoints", [])
+				if status_label: status_label.text = "Unité posée avec succès !"
 
 		EditMode.REPOSITION:
 			if _reposition_target_node:
 				_reposition_target_node.global_position = _ghost_instance.global_position
 				_reposition_target_node.rotation_degrees.y = _current_rot_y
 				_reposition_target_node = null
+				if status_label: status_label.text = "Forme replacée avec succès !"
 
 	_cancel_edit_mode()
 
@@ -452,7 +482,7 @@ func _apply_texture_to_active_node() -> void:
 	var tex_path: String = texture_option.get_item_metadata(sel_idx) if texture_option else _active_texture_path
 	var tex := TextureManager.load_texture_from_path(tex_path)
 	
-	var face_idx := target_face_option.selected if target_face_option else 0 # 0: Tout, 1: Murs, 2: Toit
+	var face_idx := target_face_option.selected if target_face_option else 0
 	
 	_apply_texture_recursive(_active_edited_node, tex, face_idx)
 	_active_edited_node.set_meta("texture_path", tex_path)
@@ -507,13 +537,15 @@ func _on_directive_selected(idx: int) -> void:
 		_active_edited_node.set_meta("directive", key)
 
 func _on_clear_pressed() -> void:
+	print("[MAP EDITOR] Bouton Effacer cliqué.")
 	for child in placed_blocks_container.get_children(): child.queue_free()
 	for child in waypoints_container.get_children(): child.queue_free()
 	if status_label: status_label.text = "Carte entièrement effacée."
 
 func _on_save_pressed() -> void:
+	print("[MAP EDITOR] Bouton Enregistrer cliqué.")
 	var m_name := map_name_input.text if map_name_input and map_name_input.text != "" else "Ma_Carte_Ceuta"
-	var m_cat := category_option.get_item_text(category_option.selected) if category_option else "Custom"
+	var m_cat := category_option.get_item_text(category_option.selected) if category_option and category_option.get_item_count() > 0 else "Custom"
 	
 	var blocks_data := []
 	var primitives_data := []
@@ -550,6 +582,7 @@ func _on_save_pressed() -> void:
 		status_label.text = "Carte enregistrée sous : " + saved_path
 
 func _on_test_map_pressed() -> void:
+	print("[MAP EDITOR] Bouton Tester Carte cliqué.")
 	_on_save_pressed()
 	var m_name := map_name_input.text if map_name_input and map_name_input.text != "" else "Ma_Carte_Ceuta"
 	var clean_name := m_name.strip_edges().validate_filename()
@@ -559,4 +592,5 @@ func _on_test_map_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/main_stage.tscn")
 
 func _on_main_menu_pressed() -> void:
+	print("[MAP EDITOR] Bouton Menu Principal cliqué.")
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
