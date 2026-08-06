@@ -99,14 +99,13 @@ func _ready() -> void:
 	_populate_sidebar_tabs()
 	_update_texture_dropdown()
 	
-	# Connexions garanties des boutons de la barre supérieure
+	# Connexions des boutons UI
 	if save_btn: save_btn.pressed.connect(_on_save_pressed)
 	if test_map_btn: test_map_btn.pressed.connect(_on_test_map_pressed)
 	if clear_btn: clear_btn.pressed.connect(_on_clear_pressed)
 	if main_menu_btn: main_menu_btn.pressed.connect(_on_main_menu_pressed)
 	if place_primitive_btn: place_primitive_btn.pressed.connect(_on_place_primitive_clicked)
 	
-	# Connexions garanties des modaux
 	if file_dialog: file_dialog.file_selected.connect(_on_texture_file_selected)
 	if import_tex_modal_btn: import_tex_modal_btn.pressed.connect(_open_file_dialog)
 	if apply_tex_btn: apply_tex_btn.pressed.connect(_apply_texture_to_active_node)
@@ -203,18 +202,18 @@ func _select_prefab(key: String) -> void:
 	_current_edit_mode = EditMode.PLACE_PREFAB
 	_selected_prefab_key = key
 	_update_ghost_instance()
-	if status_label: status_label.text = "Mode placement : Cliquez sur la carte pour poser " + PREFAB_CATALOG[key]["name"]
+	if status_label: status_label.text = "Mode placement : Cliquez sur le sol 3D pour poser " + PREFAB_CATALOG[key]["name"]
 
 func _select_primitive_type(type: String) -> void:
 	_selected_primitive_type = type
 	_current_edit_mode = EditMode.PLACE_PRIMITIVE
 	_update_ghost_instance()
-	if status_label: status_label.text = "Forme choisie : " + type.capitalize() + ". Mode placement actif ! Déplacez la souris et cliquez sur le sol 3D pour poser."
+	if status_label: status_label.text = "Forme choisie : " + type.capitalize() + ". Mode placement actif ! Cliquez sur le sol 3D pour poser."
 
 func _on_place_primitive_clicked() -> void:
 	_current_edit_mode = EditMode.PLACE_PRIMITIVE
 	_update_ghost_instance()
-	if status_label: status_label.text = "Mode placement actif ! Déplacez votre souris sur la grille et cliquez pour poser la forme 3D."
+	if status_label: status_label.text = "Mode placement actif ! Déplacez la souris sur la grille et cliquez pour poser."
 
 func _select_unit_type(key: String) -> void:
 	_current_edit_mode = EditMode.PLACE_UNIT
@@ -320,8 +319,14 @@ func _apply_ghost_material(node: Node) -> void:
 	for child in node.get_children():
 		_apply_ghost_material(child)
 
+# Guard de saisie clavier pour empêcher WASD de déplacer la caméra pendant la frappe
+func _ui_has_keyboard_focus() -> bool:
+	var f := get_viewport().gui_get_focus_owner()
+	return f is LineEdit or f is TextEdit or f is SpinBox
+
 func _process(delta: float) -> void:
-	_process_camera_movement(delta)
+	if not _ui_has_keyboard_focus():
+		_process_camera_movement(delta)
 	_update_ghost_position()
 
 func _process_camera_movement(delta: float) -> void:
@@ -341,29 +346,48 @@ func _process_camera_movement(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_RIGHT:
-			_is_rotating_cam = event.pressed
+			if event.pressed:
+				# Arbitrage Clic Droit : Annule le mode placement si actif, sinon fait tourner la caméra
+				if _current_edit_mode != EditMode.IDLE:
+					_cancel_edit_mode()
+					get_viewport().set_input_as_handled()
+					return
+				_is_rotating_cam = true
+			else:
+				_is_rotating_cam = false
+				
 		elif event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			if not _is_mouse_over_ui():
 				if _current_edit_mode == EditMode.IDLE:
 					_try_open_context_menu_at_mouse()
 				else:
 					_place_current_object()
+				get_viewport().set_input_as_handled()
+				
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_current_rot_y = wrapf(_current_rot_y + 90.0, 0.0, 360.0)
 			if _ghost_instance: _ghost_instance.rotation_degrees.y = _current_rot_y
+			get_viewport().set_input_as_handled()
+			
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			_current_rot_y = wrapf(_current_rot_y - 90.0, 0.0, 360.0)
 			if _ghost_instance: _ghost_instance.rotation_degrees.y = _current_rot_y
+			get_viewport().set_input_as_handled()
 
 	elif event is InputEventMouseMotion and _is_rotating_cam:
 		cam_pivot.rotate_y(-event.relative.x * 0.005)
 
-	elif event is InputEventKey and event.pressed:
+func _unhandled_key_input(event: InputEvent) -> void:
+	if _ui_has_keyboard_focus():
+		return
+	if event.pressed:
 		if event.keycode == KEY_R:
 			_current_rot_y = wrapf(_current_rot_y + 90.0, 0.0, 360.0)
 			if _ghost_instance: _ghost_instance.rotation_degrees.y = _current_rot_y
+			get_viewport().set_input_as_handled()
 		elif event.keycode == KEY_ESCAPE:
 			_cancel_edit_mode()
+			get_viewport().set_input_as_handled()
 
 func _cancel_edit_mode() -> void:
 	_current_edit_mode = EditMode.IDLE
@@ -373,27 +397,32 @@ func _cancel_edit_mode() -> void:
 	if status_label: status_label.text = "Mode Édition neutre."
 
 func _is_mouse_over_ui() -> bool:
-	var hovered := get_viewport().gui_get_hovered_control()
-	if hovered != null:
-		return true
-	var m_pos := get_viewport().get_mouse_position()
-	return m_pos.x < 260.0 or m_pos.y < 50.0
+	var h := get_viewport().gui_get_hovered_control()
+	while h != null:
+		if h.is_in_group("ui_blockers"):
+			return true
+		h = h.get_parent()
+	return false
+
+# Intersection Analytique avec le plan Y=0 pour éviter tout bogue d'auto-intersection physique
+func _get_analytical_grid_hit(m_pos: Vector2) -> Vector3:
+	if not camera:
+		return Vector3.ZERO
+	var ray_from := camera.project_ray_origin(m_pos)
+	var ray_dir := camera.project_ray_normal(m_pos)
+	var plane := Plane(Vector3.UP, 0.0)
+	var hit: Variant = plane.intersects_ray(ray_from, ray_dir)
+	if hit != null and hit is Vector3:
+		var p: Vector3 = hit
+		return Vector3(snappedf(p.x, grid_step), 0.0, snappedf(p.z, grid_step))
+	return Vector3.ZERO
 
 func _update_ghost_position() -> void:
 	if not _ghost_instance or not camera:
 		return
-		
 	var m_pos := get_viewport().get_mouse_position()
-	var ray_from := camera.project_ray_origin(m_pos)
-	var ray_dir := camera.project_ray_normal(m_pos)
-	
-	if abs(ray_dir.y) > 0.001:
-		var t := -ray_from.y / ray_dir.y
-		if t > 0:
-			var hit_pos := ray_from + ray_dir * t
-			var snapped_x := round(hit_pos.x / grid_step) * grid_step
-			var snapped_z := round(hit_pos.z / grid_step) * grid_step
-			_ghost_instance.global_position = Vector3(snapped_x, 0.0, snapped_z)
+	var grid_pos := _get_analytical_grid_hit(m_pos)
+	_ghost_instance.global_position = grid_pos
 
 func _try_open_context_menu_at_mouse() -> void:
 	var m_pos := get_viewport().get_mouse_position()
@@ -459,7 +488,7 @@ func _place_current_object() -> void:
 
 	_cancel_edit_mode()
 
-# Context Menu Actions
+# Actions du Menu Contextuel
 func _on_context_move(target: Node3D) -> void:
 	_reposition_target_node = target
 	_current_edit_mode = EditMode.REPOSITION

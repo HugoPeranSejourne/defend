@@ -65,10 +65,10 @@ far = 2000.0
 
 [node name="UI" type="CanvasLayer" parent="."]
 
-[node name="ContextMenu" parent="UI" instance=ExtResource("3_context_scene")]
+[node name="ContextMenu" parent="UI" groups=["ui_blockers"] instance=ExtResource("3_context_scene")]
 visible = false
 
-[node name="TopBar" type="PanelContainer" parent="UI"]
+[node name="TopBar" type="PanelContainer" parent="UI" groups=["ui_blockers"]]
 anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 50.0
@@ -136,7 +136,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
 text = "🏠 Menu"
 
-[node name="LeftSidebar" type="PanelContainer" parent="UI"]
+[node name="LeftSidebar" type="PanelContainer" parent="UI" groups=["ui_blockers"]]
 anchors_preset = 9
 anchor_bottom = 1.0
 offset_top = 55.0
@@ -264,7 +264,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="TextureModal" type="PanelContainer" parent="UI/CenterContainer"]
+[node name="TextureModal" type="PanelContainer" parent="UI/CenterContainer" groups=["ui_blockers"]]
 visible = false
 custom_minimum_size = Vector2(360, 360)
 layout_mode = 2
@@ -352,7 +352,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
 text = "❌ Fermer"
 
-[node name="DirectiveModal" type="PanelContainer" parent="UI/CenterContainer"]
+[node name="DirectiveModal" type="PanelContainer" parent="UI/CenterContainer" groups=["ui_blockers"]]
 visible = false
 custom_minimum_size = Vector2(360, 320)
 layout_mode = 2
@@ -397,7 +397,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
 text = "✔ Valider & Fermer"
 
-[node name="BottomBar" type="PanelContainer" parent="UI"]
+[node name="BottomBar" type="PanelContainer" parent="UI" groups=["ui_blockers"]]
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
@@ -414,7 +414,7 @@ theme_override_font_sizes/font_size = 12
 text = "COMMANDES : [WASD/ZQSD] Déplacer | [Clic Droit Drag] Orienter | [Clic Gauche 3D] Ouvrir Menu Contextuel | [R / Molette] Pivoter"
 horizontal_alignment = 1
 
-[node name="TextureFileDialog" type="FileDialog" parent="UI"]
+[node name="TextureFileDialog" type="FileDialog" parent="UI" groups=["ui_blockers"]]
 visible = false
 title = "Choisir une image de texture (.png, .jpg)"
 size = Vector2i(700, 500)
