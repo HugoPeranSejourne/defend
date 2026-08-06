@@ -15,7 +15,7 @@ var camera_rig: EditorCamera
 var router: InputRouter
 var ui: EditorUI
 var ghost: GhostPreview
-var selection: SelectionManager
+var selection: EditorSelectionManager
 var blocks_root: Node3D
 
 var current_map_path := ""
@@ -38,7 +38,7 @@ func _ready() -> void:
 	ghost = GhostPreview.new()
 	add_child(ghost)
 	
-	selection = SelectionManager.new()
+	selection = EditorSelectionManager.new()
 	add_child(selection)
 	
 	camera_rig = EditorCamera.new()

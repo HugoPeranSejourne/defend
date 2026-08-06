@@ -1,4 +1,4 @@
-class_name SelectionManager
+class_name EditorSelectionManager
 extends Node3D
 
 signal selection_changed(id: int)
