@@ -1,0 +1,62 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/debug_log.gd" id="1_debug_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_log_panel"]
+bg_color = Color(0.02, 0.04, 0.08, 0.88)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.9, 0.4, 0.7)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="DebugLog" type="CanvasLayer"]
+layer = 100
+script = ExtResource("1_debug_script")
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -340.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 260.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_log_panel")
+
+[node name="VBox" type="VBoxContainer" parent="PanelContainer"]
+layout_mode = 2
+
+[node name="HBox" type="HBoxContainer" parent="PanelContainer/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="PanelContainer/VBox/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.2, 0.9, 0.4, 1)
+theme_override_font_sizes/font_size = 11
+text = "📟 LOGS EN TEMPS RÉEL"
+
+[node name="ClearLogBtn" type="Button" parent="PanelContainer/VBox/HBox"]
+custom_minimum_size = Vector2(50, 20)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.9, 1)
+theme_override_font_sizes/font_size = 10
+text = "Effacer"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="PanelContainer/VBox"]
+custom_minimum_size = Vector2(0, 210)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="LogLabel" type="Label" parent="PanelContainer/VBox/ScrollContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.95, 0.5, 1)
+theme_override_font_sizes/font_size = 10
+text = "Initialisation..."

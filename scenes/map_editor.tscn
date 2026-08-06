@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scripts/map_editor.gd" id="1_editor_script"]
 [ext_resource type="Texture2D" path="res://textures/ceuta_pavement_tile.png" id="2_pavement_tex"]
 [ext_resource type="PackedScene" path="res://scenes/shape_context_menu.tscn" id="3_context_scene"]
+[ext_resource type="PackedScene" path="res://scenes/debug_log.tscn" id="4_debug_log"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_editor"]
 sky_top_color = Color(0.2, 0.45, 0.8, 1)
@@ -422,3 +423,5 @@ ok_button_text = "Ouvrir"
 file_mode = 0
 access = 2
 filters = PackedStringArray("*.png, *.jpg, *.jpeg ; Images Textures")
+
+[node name="DebugLog" parent="UI" instance=ExtResource("4_debug_log")]

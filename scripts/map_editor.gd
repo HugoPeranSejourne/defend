@@ -20,7 +20,7 @@ extends Node3D
 @onready var size_y_spin: SpinBox = $UI/LeftSidebar/TabContainer/Formes3D/VBox/SizeY/SpinBox
 @onready var size_z_spin: SpinBox = $UI/LeftSidebar/TabContainer/Formes3D/VBox/SizeZ/SpinBox
 
-# Menu Contextuel 3D avec typage fort ShapeContextMenu
+# Menu Contextuel 3D
 @onready var context_menu: ShapeContextMenu = $UI/ContextMenu
 
 # Modal Textures & Surfaces
@@ -88,7 +88,7 @@ var _cam_speed: float = 25.0
 var _is_rotating_cam: bool = false
 
 func _ready() -> void:
-	print("[MAP EDITOR] *** INITIALISATION DU SCRIPT MAP EDITOR ***")
+	DebugLog.print_log("[READY] map_editor.gd initialisé avec succès !")
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	
 	if directive_modal: directive_modal.visible = false
@@ -117,7 +117,7 @@ func _ready() -> void:
 	if clear_waypoints_btn: clear_waypoints_btn.pressed.connect(_clear_active_unit_waypoints)
 	if directive_option: directive_option.item_selected.connect(_on_directive_selected)
 
-	# Signaux du Menu Contextuel 3D (Connexion dynamique sécurisée)
+	# Signaux du Menu Contextuel 3D
 	if context_menu:
 		context_menu.connect("action_move", _on_context_move)
 		context_menu.connect("action_texture", _on_context_texture)
@@ -128,6 +128,7 @@ func _ready() -> void:
 	if status_label: status_label.text = "Éditeur 3D prêt. Choisissez une forme 3D, un bâtiment ou une unité."
 
 func _open_file_dialog() -> void:
+	DebugLog.print_log("[UI] Ouverture de la fenêtre d'importation de texture...")
 	if file_dialog:
 		file_dialog.visible = true
 		file_dialog.popup_centered(Vector2i(750, 520))
@@ -199,30 +200,30 @@ func _on_texture_file_selected(path: String) -> void:
 	if not res.is_empty():
 		_update_texture_dropdown()
 		_active_texture_path = res["path"]
-		if status_label: status_label.text = "Texture importée avec succès : " + res["name"]
+		DebugLog.print_log("[TEXTURE] Importée avec succès : " + res["name"])
 
 func _select_prefab(key: String) -> void:
 	_current_edit_mode = EditMode.PLACE_PREFAB
 	_selected_prefab_key = key
 	_update_ghost_instance()
-	if status_label: status_label.text = "Mode placement : Cliquez sur le sol 3D pour poser " + PREFAB_CATALOG[key]["name"]
+	DebugLog.print_log("[MODE] Sélection préfab : " + PREFAB_CATALOG[key]["name"])
 
 func _select_primitive_type(type: String) -> void:
 	_selected_primitive_type = type
 	_current_edit_mode = EditMode.PLACE_PRIMITIVE
 	_update_ghost_instance()
-	if status_label: status_label.text = "Forme choisie : " + type.capitalize() + ". Mode placement actif ! Cliquez sur le sol 3D pour poser."
+	DebugLog.print_log("[MODE] Sélection Forme 3D Primitive : " + type.capitalize())
 
 func _on_place_primitive_clicked() -> void:
 	_current_edit_mode = EditMode.PLACE_PRIMITIVE
 	_update_ghost_instance()
-	if status_label: status_label.text = "Mode placement actif ! Déplacez la souris sur la grille et cliquez pour poser."
+	DebugLog.print_log("[BOUTON] '➕ Placer cette Forme 3D' cliqué ! Mode placement actif.")
 
 func _select_unit_type(key: String) -> void:
 	_current_edit_mode = EditMode.PLACE_UNIT
 	_selected_unit_type = key
 	_update_ghost_instance()
-	if status_label: status_label.text = "Mode placement : Cliquez sur la carte pour poser " + UNIT_CATALOG[key]["name"]
+	DebugLog.print_log("[MODE] Sélection Unité : " + UNIT_CATALOG[key]["name"])
 
 func _update_ghost_instance() -> void:
 	if _ghost_instance:
@@ -358,7 +359,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				_is_rotating_cam = false
 				
 		elif event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			if not _is_mouse_over_ui():
+			var over_ui := _is_mouse_over_ui()
+			DebugLog.print_log("[CLIC GAUCHE] Clic 3D | Over UI = " + str(over_ui) + " | Mode = " + str(_current_edit_mode))
+			if not over_ui:
 				if _current_edit_mode == EditMode.IDLE:
 					_try_open_context_menu_at_mouse()
 				else:
@@ -395,7 +398,7 @@ func _cancel_edit_mode() -> void:
 	if _ghost_instance:
 		_ghost_instance.queue_free()
 		_ghost_instance = null
-	if status_label: status_label.text = "Mode Édition neutre."
+	DebugLog.print_log("[MODE] Annulation / Mode Édition Neutre")
 
 func _is_mouse_over_ui() -> bool:
 	var h := get_viewport().gui_get_hovered_control()
@@ -438,6 +441,7 @@ func _try_open_context_menu_at_mouse() -> void:
 			target = target.get_parent()
 		if target and target.get_parent() == placed_blocks_container:
 			_active_edited_node = target as Node3D
+			DebugLog.print_log("[3D CONTEXT] Clic sur " + _active_edited_node.name)
 			if context_menu and context_menu.has_method("open_at_mouse"):
 				context_menu.call("open_at_mouse", _active_edited_node, m_pos)
 
@@ -454,7 +458,7 @@ func _place_current_object() -> void:
 				block.global_position = _ghost_instance.global_position
 				block.rotation_degrees.y = _current_rot_y
 				block.set_meta("block_key", _selected_prefab_key)
-				if status_label: status_label.text = "Bâtiment posé avec succès !"
+				DebugLog.print_log("[POSÉ] Bâtiment " + _selected_prefab_key + " à " + str(block.global_position))
 
 		EditMode.PLACE_PRIMITIVE:
 			var prim := _create_primitive_mesh_node(_selected_primitive_type, _get_primitive_size())
@@ -464,7 +468,7 @@ func _place_current_object() -> void:
 			prim.set_meta("primitive_type", _selected_primitive_type)
 			prim.set_meta("primitive_size", [_get_primitive_size().x, _get_primitive_size().y, _get_primitive_size().z])
 			prim.set_meta("texture_path", _active_texture_path)
-			if status_label: status_label.text = "Forme 3D posée avec succès !"
+			DebugLog.print_log("[POSÉ] Forme 3D " + _selected_primitive_type + " à " + str(prim.global_position))
 
 		EditMode.PLACE_UNIT:
 			var u_path: String = UNIT_CATALOG[_selected_unit_type]["scene"]
@@ -477,14 +481,14 @@ func _place_current_object() -> void:
 				unit.set_meta("unit_key", _selected_unit_type)
 				unit.set_meta("directive", "GUARD" if not UNIT_CATALOG[_selected_unit_type]["is_enemy"] else "CHARGE_BASE")
 				unit.set_meta("waypoints", [])
-				if status_label: status_label.text = "Unité posée avec succès !"
+				DebugLog.print_log("[POSÉ] Unité " + _selected_unit_type + " à " + str(unit.global_position))
 
 		EditMode.REPOSITION:
 			if _reposition_target_node:
 				_reposition_target_node.global_position = _ghost_instance.global_position
 				_reposition_target_node.rotation_degrees.y = _current_rot_y
+				DebugLog.print_log("[REPLACÉ] Élément déplacé à " + str(_reposition_target_node.global_position))
 				_reposition_target_node = null
-				if status_label: status_label.text = "Forme replacée avec succès !"
 
 		EditMode.ADD_WAYPOINT:
 			if _active_edited_node:
@@ -500,10 +504,8 @@ func _place_current_object() -> void:
 				var waypoints_list: Array = _active_edited_node.get_meta("waypoints") if _active_edited_node.has_meta("waypoints") else []
 				waypoints_list.append([hit_pos.x, hit_pos.y, hit_pos.z])
 				_active_edited_node.set_meta("waypoints", waypoints_list)
-				
-				if status_label:
-					status_label.text = "🚩 Waypoint %d posé avec succès !" % waypoints_list.size()
-			return # Ne PAS annuler le mode placement afin de pouvoir poser d'autres waypoints !
+				DebugLog.print_log("[WAYPOINT] Posé à " + str(hit_pos))
+			return
 
 	_cancel_edit_mode()
 
@@ -512,24 +514,25 @@ func _on_context_move(target: Node3D) -> void:
 	_reposition_target_node = target
 	_current_edit_mode = EditMode.REPOSITION
 	_update_ghost_instance()
-	if status_label: status_label.text = "🖐️ Déplacement : Déplacez votre souris sur la grille et cliquez pour replacer l'élément."
+	DebugLog.print_log("[CONTEXT] Déplacement initié pour " + target.name)
 
 func _on_context_texture(target: Node3D) -> void:
 	_active_edited_node = target
 	if texture_modal:
 		texture_modal.visible = true
 		_update_texture_dropdown()
+	DebugLog.print_log("[CONTEXT] Texturation initiée pour " + target.name)
 
 func _on_context_resize(target: Node3D) -> void:
 	_active_edited_node = target
 	if tab_container:
-		tab_container.current_tab = 1 # Onglet Formes3D
-	if status_label: status_label.text = "📐 Redimensionnez la forme dans l'onglet Formes 3D et cliquez sur Placer."
+		tab_container.current_tab = 1
+	DebugLog.print_log("[CONTEXT] Redimensionnement pour " + target.name)
 
 func _on_context_delete(target: Node3D) -> void:
 	if target:
+		DebugLog.print_log("[CONTEXT] Suppression de " + target.name)
 		target.queue_free()
-		if status_label: status_label.text = "🗑️ Élément supprimé."
 
 func _apply_texture_to_active_node() -> void:
 	if not _active_edited_node: return
@@ -544,7 +547,7 @@ func _apply_texture_to_active_node() -> void:
 	_active_edited_node.set_meta("texture_path", tex_path)
 	
 	if texture_modal: texture_modal.visible = false
-	if status_label: status_label.text = "🖼️ Texture appliquée avec succès !"
+	DebugLog.print_log("[TEXTURE] Appliquée à " + _active_edited_node.name)
 
 func _apply_texture_recursive(node: Node, tex: Texture2D, face_idx: int) -> void:
 	if node is MeshInstance3D:
@@ -568,16 +571,17 @@ func _open_directive_modal(unit: Node3D) -> void:
 	_active_edited_node = unit
 	if not directive_modal: return
 	directive_modal.visible = true
+	DebugLog.print_log("[DIRECTIVE] Modal ouvert pour unité : " + unit.name)
 
 func _start_adding_waypoints() -> void:
 	_current_edit_mode = EditMode.ADD_WAYPOINT
-	if status_label: status_label.text = "Cliquez sur la carte 3D pour poser les Waypoints de patrouille..."
+	DebugLog.print_log("[WAYPOINT] Mode ajout de waypoints actif...")
 
 func _clear_active_unit_waypoints() -> void:
 	if _active_edited_node:
 		_active_edited_node.set_meta("waypoints", [])
 		for child in waypoints_container.get_children(): child.queue_free()
-		if status_label: status_label.text = "Waypoints effacés."
+		DebugLog.print_log("[WAYPOINT] Effacés")
 
 func _on_directive_selected(idx: int) -> void:
 	if _active_edited_node:
@@ -591,15 +595,15 @@ func _on_directive_selected(idx: int) -> void:
 		elif "HUNT_ALLIES" in text: key = "HUNT_ALLIES"
 		elif "AMBUSH" in text: key = "AMBUSH"
 		_active_edited_node.set_meta("directive", key)
+		DebugLog.print_log("[DIRECTIVE] Changée vers : " + key)
 
 func _on_clear_pressed() -> void:
-	print("[MAP EDITOR] Bouton Effacer cliqué.")
+	DebugLog.print_log("[BOUTON] '🗑️ Effacer' cliqué !")
 	for child in placed_blocks_container.get_children(): child.queue_free()
 	for child in waypoints_container.get_children(): child.queue_free()
-	if status_label: status_label.text = "Carte entièrement effacée."
 
 func _on_save_pressed() -> void:
-	print("[MAP EDITOR] Bouton Enregistrer cliqué.")
+	DebugLog.print_log("[BOUTON] '💾 Enregistrer' cliqué !")
 	var m_name := map_name_input.text if map_name_input and map_name_input.text != "" else "Ma_Carte_Ceuta"
 	var m_cat := category_option.get_item_text(category_option.selected) if category_option and category_option.get_item_count() > 0 else "Custom"
 	
@@ -636,9 +640,10 @@ func _on_save_pressed() -> void:
 	var saved_path := MapSerializer.save_map(m_name, m_cat, "Joueur", blocks_data, primitives_data, units_data)
 	if status_label and saved_path != "":
 		status_label.text = "Carte enregistrée sous : " + saved_path
+		DebugLog.print_log("[SAUVEGARDE] Enregistrée sous : " + saved_path)
 
 func _on_test_map_pressed() -> void:
-	print("[MAP EDITOR] Bouton Tester Carte cliqué.")
+	DebugLog.print_log("[BOUTON] '⚔️ Tester Carte' cliqué !")
 	_on_save_pressed()
 	var m_name := map_name_input.text if map_name_input and map_name_input.text != "" else "Ma_Carte_Ceuta"
 	var clean_name := m_name.strip_edges().validate_filename()
@@ -648,5 +653,5 @@ func _on_test_map_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/main_stage.tscn")
 
 func _on_main_menu_pressed() -> void:
-	print("[MAP EDITOR] Bouton Menu Principal cliqué.")
+	DebugLog.print_log("[BOUTON] '🏠 Menu Principal' cliqué !")
 	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
