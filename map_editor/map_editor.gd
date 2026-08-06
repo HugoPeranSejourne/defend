@@ -61,13 +61,19 @@ func _ready() -> void:
 	undo.changed.connect(func(): ui.set_undo_enabled(undo.can_undo(), undo.can_redo()))
 	_update_title()
 
+	camera_rig.position = Vector3(0, 0, 20)
+	camera_rig.focus_on(Vector3.ZERO)
+
 	# Heartbeat : vérification des sous-systèmes
 	if ui == null or camera_rig.camera == null:
 		ui.show_fatal("Sous-système manquant (ui=%s, camera=%s)" % [ui != null, camera_rig.camera != null])
+		DebugLog.log_error("Sous-système manquant")
 	else:
 		ui.set_status("✅ Éditeur v2 prêt — %d entrées catalogue. Choisissez un élément à gauche." % catalog.entries.size())
+		DebugLog.log_msg("[MapEditor] Éditeur prêt")
 	print("[MapEditor] init OK — tools: %d | catalogue: %d | textures: %d | grille %dx%d (cellule %.1fm)" % [
 		state_machine.count(), catalog.entries.size(), ui.texture_count(), GRID_DIM.x, GRID_DIM.y, GRID_CELL])
+	DebugLog.log_msg("[MapEditor] init OK — tools: %d | catalogue: %d" % [state_machine.count(), catalog.entries.size()])
 
 func _build_environment() -> void:
 	var sun := DirectionalLight3D.new()

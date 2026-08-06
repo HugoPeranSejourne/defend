@@ -12,6 +12,7 @@ config/features=PackedStringArray("4.7", "Forward Plus")
 
 [autoload]
 
+DebugLog="*res://map_editor/core/debug_log.gd"
 GameState="*res://map_editor/data/game_state.gd"
 
 [input]

@@ -125,14 +125,21 @@ func _build_chrome() -> void:
 	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(middle)
+
 	var sidebar := PanelContainer.new()
 	sidebar.name = "LeftSidebar"
 	sidebar.custom_minimum_size.x = 280
+	sidebar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	middle.add_child(sidebar)
+
 	_tabs = TabContainer.new()
+	_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	sidebar.add_child(_tabs)
+
 	var spacer2 := Control.new()
 	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spacer2.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	spacer2.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	middle.add_child(spacer2)
 
@@ -193,7 +200,9 @@ func _build_popups() -> void:
 func _mk_tab(title: String) -> GridContainer:
 	var scroll := ScrollContainer.new()
 	scroll.name = title
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_tabs.add_child(scroll)
 	var grid := GridContainer.new()
 	grid.columns = 1
