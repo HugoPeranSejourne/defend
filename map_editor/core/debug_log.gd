@@ -38,11 +38,14 @@ func log_warn(msg: String) -> void:
 	_log("WARN: " + msg)
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_F12:
-		_overlay_visible = not _overlay_visible
-		_overlay.visible = _overlay_visible
-		if _overlay_visible:
-			_overlay.text = "\n".join(_buffer)
+	# F12 (fn + F12 sur Mac) OU Cmd+L / Ctrl+L = toggle overlay de debug en jeu
+	if event is InputEventKey and event.pressed:
+		var k := event as InputEventKey
+		if k.keycode == KEY_F12 or (k.is_command_or_control_pressed() and k.keycode == KEY_L):
+			_overlay_visible = not _overlay_visible
+			_overlay.visible = _overlay_visible
+			if _overlay_visible:
+				_overlay.text = "\n".join(_buffer)
 
 func get_log_path() -> String:
 	return ProjectSettings.globalize_path(LOG_FILE)
