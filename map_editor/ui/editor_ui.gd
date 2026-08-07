@@ -176,7 +176,8 @@ func _build_popups() -> void:
 		match id:
 			0: context_duplicate.emit()
 			1: context_texture.emit()
-			2: context_delete.emit())
+			2: context_delete.emit()
+	)
 	add_child(_context_popup)
 
 	_confirm_clear = ConfirmationDialog.new()
