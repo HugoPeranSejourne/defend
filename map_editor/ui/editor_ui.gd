@@ -11,17 +11,18 @@ signal undo_requested
 signal redo_requested
 signal catalog_selected(key: StringName)
 signal texture_selected(path: String)
+signal texture_import_requested(source_path: String)
 signal context_duplicate
 signal context_delete
 signal context_texture
 signal map_name_changed(new_name: String)
-
-# Signaux M3
 signal spawn_player_requested
 signal spawn_enemy_requested
 signal new_path_requested
 signal unit_selected(key: StringName)
 signal base_requested
+signal stack_toggled(enabled: bool)
+signal magnet_toggled(enabled: bool)
 
 var _status_label: Label
 var _coords_label: Label
@@ -41,13 +42,19 @@ var _fatal: PanelContainer
 var _undo_btn: Button
 var _redo_btn: Button
 var _tex_count := 0
+var _sel_rect: ColorRect
+var _help_panel: PanelContainer
+var _import_dialog: FileDialog
+var _stack_check: CheckBox
+var _magnet_check: CheckBox
 
 func _ready() -> void:
 	layer = 10
 	_build_chrome()
 	_build_popups()
+	_build_help()
 
-func setup(entries: Array[Dictionary], textures: PackedStringArray, unit_entries: Array[Dictionary] = [], paths: Array[Dictionary] = []) -> void:
+func setup(entries: Array[Dictionary], textures: PackedStringArray, unit_entries: Array[Dictionary], paths: Array[Dictionary]) -> void:
 	_tab_buildings = _mk_tab("🏢 Bâtiments")
 	_tab_shapes = _mk_tab("📐 Formes 3D")
 	_tab_textures = _mk_tab("🎨 Textures")
@@ -65,6 +72,13 @@ func setup(entries: Array[Dictionary], textures: PackedStringArray, unit_entries
 		else:
 			_tab_shapes.add_child(btn)
 
+	# Textures
+	var import_btn := Button.new()
+	import_btn.text = "📥 Importer texture…"
+	import_btn.pressed.connect(func(): _import_dialog.popup_centered(Vector2i(800, 600)))
+	_tab_textures.add_child(import_btn)
+	var sep := HSeparator.new()
+	_tab_textures.add_child(sep)
 	var none := Button.new()
 	none.text = "Couleur unie (défaut)"
 	none.pressed.connect(func(): texture_selected.emit(""))
@@ -77,58 +91,6 @@ func setup(entries: Array[Dictionary], textures: PackedStringArray, unit_entries
 		_tab_textures.add_child(b)
 	_tex_count = textures.size()
 
-func _mk_tab_units(grid: GridContainer, unit_entries: Array[Dictionary], paths: Array[Dictionary]) -> void:
-	# Section Spawns
-	var lbl_spawn := Label.new()
-	lbl_spawn.text = "— Zones & Spawns —"
-	lbl_spawn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	grid.add_child(lbl_spawn)
-
-	var btn_player := Button.new()
-	btn_player.text = "🟢 Zone déploiement Joueur"
-	btn_player.pressed.connect(func(): spawn_player_requested.emit())
-	grid.add_child(btn_player)
-
-	var btn_enemy := Button.new()
-	btn_enemy.text = "🔴 Spawn Ennemi"
-	btn_enemy.pressed.connect(func(): spawn_enemy_requested.emit())
-	grid.add_child(btn_enemy)
-
-	var btn_base := Button.new()
-	btn_base.text = "🏰 Placer Base à défendre"
-	btn_base.pressed.connect(func(): base_requested.emit())
-	grid.add_child(btn_base)
-
-	# Section Chemins
-	var lbl_path := Label.new()
-	lbl_path.text = "— Chemins ennemis —"
-	lbl_path.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	grid.add_child(lbl_path)
-
-	var btn_path := Button.new()
-	btn_path.text = "🚩 Nouveau Chemin"
-	btn_path.pressed.connect(func(): new_path_requested.emit())
-	grid.add_child(btn_path)
-
-	for p in paths:
-		var lbl := Label.new()
-		var wps: Array = p.get("waypoints", [])
-		lbl.text = "  • %s (%d pts)" % [p.get("id", "?"), wps.size()]
-		grid.add_child(lbl)
-
-	# Section Unités
-	var lbl_unit := Label.new()
-	lbl_unit.text = "— Unités —"
-	lbl_unit.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	grid.add_child(lbl_unit)
-
-	for e in unit_entries:
-		var btn := Button.new()
-		btn.text = e.label
-		var key: StringName = e.key
-		btn.pressed.connect(func(): unit_selected.emit(key))
-		grid.add_child(btn)
-
 func texture_count() -> int:
 	return _tex_count
 
@@ -138,7 +100,7 @@ func _build_chrome() -> void:
 	var root := Control.new()
 	root.name = "Root"
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE # LE plein écran qui ne bloque rien
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
 	var vbox := VBoxContainer.new()
@@ -161,7 +123,7 @@ func _build_chrome() -> void:
 	hb.add_child(_name_edit)
 	hb.add_child(_mk_button("💾 Enregistrer", func(): save_requested.emit(), "Ctrl+S"))
 	hb.add_child(_mk_button("📂 Charger", _open_load_popup, ""))
-	hb.add_child(_mk_button("▶ Tester", func(): test_requested.emit(), "Sauvegarde puis lance la partie"))
+	hb.add_child(_mk_button("▶ Tester", func(): test_requested.emit(), "Sauvegarde puis lance le test"))
 	hb.add_child(_mk_button("🗑 Effacer", func(): _confirm_clear.popup_centered(), ""))
 	_undo_btn = _mk_button("↶", func(): undo_requested.emit(), "Annuler (Ctrl+Z)")
 	_redo_btn = _mk_button("↷", func(): redo_requested.emit(), "Rétablir (Ctrl+Maj+Z)")
@@ -170,31 +132,43 @@ func _build_chrome() -> void:
 	hb.add_child(_undo_btn)
 	hb.add_child(_redo_btn)
 	hb.add_child(_mk_button("🏠 Menu", func(): main_menu_requested.emit(), ""))
+
+	# Toggles M4
+	_stack_check = CheckBox.new()
+	_stack_check.text = "📚 Empiler"
+	_stack_check.tooltip_text = "Autoriser l'empilement de blocs"
+	_stack_check.toggled.connect(func(on: bool): stack_toggled.emit(on))
+	hb.add_child(_stack_check)
+	_magnet_check = CheckBox.new()
+	_magnet_check.text = "🧲 Magnétisme"
+	_magnet_check.button_pressed = true
+	_magnet_check.tooltip_text = "Aligner automatiquement sur les surfaces"
+	_magnet_check.toggled.connect(func(on: bool): magnet_toggled.emit(on))
+	hb.add_child(_magnet_check)
+
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hb.add_child(spacer)
+	hb.add_child(_mk_button("❓ Aide (F1)", toggle_help, "Raccourcis clavier"))
 	_coords_label = Label.new()
 	_coords_label.text = "X: —  Z: —"
 	hb.add_child(_coords_label)
 
-	# --- Milieu : sidebar + espace 3D ---
+	# --- Milieu ---
 	var middle := HBoxContainer.new()
 	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(middle)
-
 	var sidebar := PanelContainer.new()
 	sidebar.name = "LeftSidebar"
 	sidebar.custom_minimum_size.x = 280
 	sidebar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	middle.add_child(sidebar)
-
 	_tabs = TabContainer.new()
 	_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	sidebar.add_child(_tabs)
-
 	var spacer2 := Control.new()
 	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer2.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -209,7 +183,14 @@ func _build_chrome() -> void:
 	_status_label.text = "Initialisation…"
 	status.add_child(_status_label)
 
-	# --- Écran d'erreur fatale ---
+	# Rectangle de sélection
+	_sel_rect = ColorRect.new()
+	_sel_rect.color = Color(0.3, 0.7, 1.0, 0.15)
+	_sel_rect.visible = false
+	_sel_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_sel_rect)
+
+	# Erreur fatale
 	_fatal = PanelContainer.new()
 	_fatal.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_fatal.visible = false
@@ -256,6 +237,61 @@ func _build_popups() -> void:
 	_error_dialog.title = "Erreur"
 	add_child(_error_dialog)
 
+	_import_dialog = FileDialog.new()
+	_import_dialog.title = "Importer une texture"
+	_import_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	_import_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	_import_dialog.filters = PackedStringArray(["*.png,*.jpg,*.jpeg,*.webp ; Images"])
+	_import_dialog.file_selected.connect(func(path: String): texture_import_requested.emit(path))
+	add_child(_import_dialog)
+
+func _build_help() -> void:
+	_help_panel = PanelContainer.new()
+	_help_panel.set_anchors_preset(Control.PRESET_CENTER)
+	_help_panel.custom_minimum_size = Vector2(520, 0)
+	_help_panel.visible = false
+	add_child(_help_panel)
+	var vbox := VBoxContainer.new()
+	_help_panel.add_child(vbox)
+	var title := Label.new()
+	title.text = "❓ Raccourcis Éditeur"
+	vbox.add_child(title)
+	var body := Label.new()
+	body.text = """CAMÉRA
+  WASD / ←→ : déplacement horizontal
+  ↑↓ : monter / descendre
+  Clic droit glissé : orbite
+  Molette : zoom (ou niveau en mode pose+empilement)
+  Clic milieu glissé : déplacement "grab"
+  F : centrer sur sélection
+
+BLOCS
+  Clic gauche : sélectionner / placer
+  Glisser : déplacer (ou rectangle de sélection si vide)
+  Shift+clic : multi-sélection
+  R / Maj+R : pivoter 90°
+  [ / ] : réduire / agrandir
+  Ctrl+D : dupliquer
+  Ctrl+C / Ctrl+V : copier / coller
+  Suppr / Retour : supprimer
+
+GÉNÉRAL
+  Ctrl+Z / Ctrl+Maj+Z : annuler / rétablir
+  Ctrl+S : enregistrer
+  Échap : annuler mode / désélectionner
+  F1 : cette aide
+  Cmd+L / F12 : overlay logs (DebugLog)
+
+MODES
+  📚 Empiler : autorise l'empilement de blocs
+  🧲 Magnétisme : aligne automatiquement sur la surface libre"""
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD
+	vbox.add_child(body)
+	var close := Button.new()
+	close.text = "Fermer (F1)"
+	close.pressed.connect(func(): _help_panel.visible = false)
+	vbox.add_child(close)
+
 func _mk_tab(title: String) -> GridContainer:
 	var scroll := ScrollContainer.new()
 	scroll.name = title
@@ -267,6 +303,48 @@ func _mk_tab(title: String) -> GridContainer:
 	grid.columns = 1
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(grid)
+	return grid
+
+func _mk_tab_units(grid: GridContainer, unit_entries: Array[Dictionary], paths: Array[Dictionary]) -> GridContainer:
+	var lbl_spawn := Label.new()
+	lbl_spawn.text = "— Zones & Spawns —"
+	lbl_spawn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	grid.add_child(lbl_spawn)
+	var btn_player := Button.new()
+	btn_player.text = "🟢 Zone déploiement Joueur"
+	btn_player.pressed.connect(func(): spawn_player_requested.emit())
+	grid.add_child(btn_player)
+	var btn_enemy := Button.new()
+	btn_enemy.text = "🔴 Spawn Ennemi"
+	btn_enemy.pressed.connect(func(): spawn_enemy_requested.emit())
+	grid.add_child(btn_enemy)
+	var btn_base := Button.new()
+	btn_base.text = "🏰 Placer Base à défendre"
+	btn_base.pressed.connect(func(): base_requested.emit())
+	grid.add_child(btn_base)
+	var lbl_path := Label.new()
+	lbl_path.text = "— Chemins ennemis —"
+	lbl_path.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	grid.add_child(lbl_path)
+	var btn_path := Button.new()
+	btn_path.text = "🚩 Nouveau Chemin"
+	btn_path.pressed.connect(func(): new_path_requested.emit())
+	grid.add_child(btn_path)
+	for p in paths:
+		var lbl := Label.new()
+		var wps: Array = p.get("waypoints", [])
+		lbl.text = "  • %s (%d pts)" % [p.get("id", "?"), wps.size()]
+		grid.add_child(lbl)
+	var lbl_unit := Label.new()
+	lbl_unit.text = "— Unités —"
+	lbl_unit.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	grid.add_child(lbl_unit)
+	for e in unit_entries:
+		var btn := Button.new()
+		btn.text = e.label
+		var key: StringName = e.key
+		btn.pressed.connect(func(): unit_selected.emit(key))
+		grid.add_child(btn)
 	return grid
 
 func _mk_button(text: String, cb: Callable, tooltip: String) -> Button:
@@ -281,7 +359,8 @@ func _mk_button(text: String, cb: Callable, tooltip: String) -> Button:
 
 func is_modal_open() -> bool:
 	return _confirm_clear.visible or _confirm_quit.visible or _error_dialog.visible \
-		or _load_popup.visible or _context_popup.visible or _fatal.visible
+		or _load_popup.visible or _context_popup.visible or _fatal.visible \
+		or _help_panel.visible or _import_dialog.visible
 
 func set_status(text: String) -> void:
 	_status_label.text = text
@@ -318,6 +397,18 @@ func open_context_menu(screen_pos: Vector2) -> void:
 
 func focus_texture_tab() -> void:
 	_tabs.current_tab = 2
+
+func toggle_help() -> void:
+	_help_panel.visible = not _help_panel.visible
+
+func show_selection_rect(a: Vector2, b: Vector2) -> void:
+	var r := Rect2(a, b - a).abs()
+	_sel_rect.position = r.position
+	_sel_rect.size = r.size
+	_sel_rect.visible = true
+
+func hide_selection_rect() -> void:
+	_sel_rect.visible = false
 
 func _open_load_popup() -> void:
 	_load_popup.popup(Rect2i(Vector2i(get_viewport().get_mouse_position()), Vector2i.ZERO))

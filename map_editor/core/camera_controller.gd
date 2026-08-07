@@ -34,6 +34,9 @@ func pan(dir: Vector2, delta: float) -> void:
 	var speed := pan_speed * (distance / 45.0)
 	position += (right * dir.x + fwd * dir.y) * speed * delta
 
+func pan_vertical(amount: float) -> void:
+	position.y = maxf(2.0, position.y + amount)
+
 func pan_pixels(relative: Vector2) -> void:
 	var fwd := -global_transform.basis.z; fwd.y = 0.0; fwd = fwd.normalized()
 	var right := global_transform.basis.x; right.y = 0.0; right = right.normalized()
@@ -50,7 +53,7 @@ func zoom(steps: float) -> void:
 	_apply()
 
 func focus_on(point: Vector3) -> void:
-	position = Vector3(point.x, 0.0, point.z)
+	position = Vector3(point.x, position.y, point.z)
 
 func _apply() -> void:
 	rotation.y = yaw
