@@ -1,7 +1,7 @@
 class_name MapIO
 extends RefCounted
 
-const FORMAT_VERSION := 1
+const FORMAT_VERSION := 2
 const MAPS_DIR := "user://maps"
 const TEXTURES_DIR := "res://textures"
 
@@ -18,18 +18,33 @@ static func save_map(data: MapData, path: String) -> Error:
 			"pos": _v3(b.pos), "rot_y": b.rot_y, "size": _v3(b.size),
 			"texture": b.texture, "category": String(b.category),
 		})
-	var player: Array = []; for v in data.player_spawns: player.append(_v3(v))
-	var enemy: Array = []; for v in data.enemy_spawns: enemy.append(_v3(v))
+	var player: Array = []
+	for v in data.player_spawns: player.append(_v3(v))
+	var enemy: Array = []
+	for v in data.enemy_spawns: enemy.append(_v3(v))
+	var paths_json: Array = []
+	for p in data.enemy_paths:
+		var wps: Array = []
+		for wp in p.get("waypoints", []):
+			if wp is Vector3:
+				wps.append(_v3(wp))
+		paths_json.append({"id": String(p.get("id", "")), "waypoints": wps})
+	var units_json: Array = []
+	for u in data.units:
+		units_json.append({
+			"id": u.id, "key": String(u.key), "pos": _v3(u.pos),
+			"path_id": String(u.get("path_id", "")), "directive": String(u.get("directive", "attack")),
+		})
 	var dict := {
 		"format_version": FORMAT_VERSION,
 		"meta": {"name": data.meta_name, "author": data.meta_author, "modified": Time.get_datetime_string_from_system()},
 		"grid": {"cell_size": data.grid_cell_size, "dimensions": [data.grid_dimensions.x, data.grid_dimensions.y]},
 		"blocks": blocks_json,
 		"spawns": {"player": player, "enemy": enemy},
-		"enemy_paths": data.enemy_paths,
-		"units": data.units,
+		"enemy_paths": paths_json,
+		"units": units_json,
+		"has_base": data.has_base,
 		"base_position": _v3(data.base_position),
-		"buildable_zones": [],
 	}
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
@@ -73,6 +88,30 @@ static func load_map(path: String) -> MapData:
 			"texture": String(bd.get("texture", "")),
 			"category": StringName(bd.get("category", "shape")),
 		})
+	# M3 — Gameplay
+	for v in parsed.get("spawns", {}).get("player", []):
+		data.player_spawns.append(_to_v3(v))
+	for v in parsed.get("spawns", {}).get("enemy", []):
+		data.enemy_spawns.append(_to_v3(v))
+	for pd in parsed.get("enemy_paths", []):
+		if not (pd is Dictionary):
+			continue
+		var wps: Array[Vector3] = []
+		for wp in pd.get("waypoints", []):
+			wps.append(_to_v3(wp))
+		data.enemy_paths.append({"id": String(pd.get("id", "")), "waypoints": wps})
+	for ud in parsed.get("units", []):
+		if not (ud is Dictionary):
+			continue
+		data.units.append({
+			"id": int(ud.get("id", 0)),
+			"key": StringName(ud.get("key", "soldier")),
+			"pos": _to_v3(ud.get("pos", [0, 0, 0])),
+			"path_id": String(ud.get("path_id", "")),
+			"directive": String(ud.get("directive", "attack")),
+		})
+	data.has_base = bool(parsed.get("has_base", false))
+	data.base_position = _to_v3(parsed.get("base_position", [0, 0, 0]))
 	return data
 
 static func list_maps() -> PackedStringArray:
@@ -104,10 +143,33 @@ static func validate(data: MapData) -> Array[String]:
 	var problems: Array[String] = []
 	if data.blocks.is_empty():
 		problems.append("La carte ne contient aucun bloc.")
+	if data.enemy_spawns.is_empty():
+		problems.append("Aucun spawn ennemi placé.")
+	if data.player_spawns.is_empty():
+		problems.append("Aucune zone de déploiement joueur placée.")
+	if data.enemy_paths.is_empty():
+		problems.append("Aucun chemin ennemi tracé.")
+	else:
+		for i in data.enemy_paths.size():
+			var wps: Array = data.enemy_paths[i].get("waypoints", [])
+			if wps.size() < 2:
+				problems.append("Chemin '%s' : moins de 2 waypoints." % data.enemy_paths[i].get("id", "?"))
+	if not data.has_base:
+		problems.append("Aucune base à défendre placée.")
+	# Vérifier que chaque chemin atteint la base (rayon 20m)
+	if data.has_base and not data.enemy_paths.is_empty():
+		for p in data.enemy_paths:
+			var wps: Array = p.get("waypoints", [])
+			if wps.size() >= 2:
+				var last: Vector3 = wps[wps.size() - 1]
+				if last.distance_to(data.base_position) > 20.0:
+					problems.append("Chemin '%s' : le dernier waypoint est à %.0fm de la base (>20m)." % [p.get("id", "?"), last.distance_to(data.base_position)])
 	return problems
 
 static func _v3(v: Vector3) -> Array:
 	return [v.x, v.y, v.z]
 
 static func _to_v3(a: Array) -> Vector3:
-	return Vector3(float(a[0]), float(a[1]), float(a[2]))
+	if a.size() >= 3:
+		return Vector3(float(a[0]), float(a[1]), float(a[2]))
+	return Vector3.ZERO

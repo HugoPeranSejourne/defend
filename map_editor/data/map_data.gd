@@ -8,10 +8,11 @@ extends Resource
 @export var grid_cell_size := 2.0
 @export var grid_dimensions := Vector2i(64, 64)
 @export var blocks: Array[Dictionary] = []
-# Champs M3 (déjà sérialisés, outillés plus tard) :
+# M3 — Gameplay :
 @export var player_spawns: Array[Vector3] = []
 @export var enemy_spawns: Array[Vector3] = []
-@export var enemy_paths: Array[Dictionary] = []
-@export var units: Array[Dictionary] = []
+@export var enemy_paths: Array[Dictionary] = []  # {id: String, waypoints: Array[Vector3]}
+@export var units: Array[Dictionary] = []        # {id: int, key: StringName, pos: Vector3, path_id: String, directive: String}
+@export var has_base := false
 @export var base_position := Vector3.ZERO
 @export var buildable_zones: Array[Rect2] = []

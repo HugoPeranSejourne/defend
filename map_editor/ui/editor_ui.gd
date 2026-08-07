@@ -16,6 +16,13 @@ signal context_delete
 signal context_texture
 signal map_name_changed(new_name: String)
 
+# Signaux M3
+signal spawn_player_requested
+signal spawn_enemy_requested
+signal new_path_requested
+signal unit_selected(key: StringName)
+signal base_requested
+
 var _status_label: Label
 var _coords_label: Label
 var _name_edit: LineEdit
@@ -40,11 +47,13 @@ func _ready() -> void:
 	_build_chrome()
 	_build_popups()
 
-func setup(entries: Array[Dictionary], textures: PackedStringArray) -> void:
+func setup(entries: Array[Dictionary], textures: PackedStringArray, unit_entries: Array[Dictionary] = [], paths: Array[Dictionary] = []) -> void:
 	_tab_buildings = _mk_tab("🏢 Bâtiments")
 	_tab_shapes = _mk_tab("📐 Formes 3D")
 	_tab_textures = _mk_tab("🎨 Textures")
 	_tab_units = _mk_tab("👥 Unités")
+	_mk_tab_units(_tab_units, unit_entries, paths)
+
 	for e in entries:
 		var btn := Button.new()
 		btn.text = e.label
@@ -55,6 +64,7 @@ func setup(entries: Array[Dictionary], textures: PackedStringArray) -> void:
 			_tab_buildings.add_child(btn)
 		else:
 			_tab_shapes.add_child(btn)
+
 	var none := Button.new()
 	none.text = "Couleur unie (défaut)"
 	none.pressed.connect(func(): texture_selected.emit(""))
@@ -66,10 +76,58 @@ func setup(entries: Array[Dictionary], textures: PackedStringArray) -> void:
 		b.pressed.connect(func(): texture_selected.emit(path))
 		_tab_textures.add_child(b)
 	_tex_count = textures.size()
-	var l := Label.new()
-	l.text = "🚧 Disponible au milestone M3\n(spawns, chemins ennemis, directives)"
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD
-	_tab_units.add_child(l)
+
+func _mk_tab_units(grid: GridContainer, unit_entries: Array[Dictionary], paths: Array[Dictionary]) -> void:
+	# Section Spawns
+	var lbl_spawn := Label.new()
+	lbl_spawn.text = "— Zones & Spawns —"
+	lbl_spawn.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	grid.add_child(lbl_spawn)
+
+	var btn_player := Button.new()
+	btn_player.text = "🟢 Zone déploiement Joueur"
+	btn_player.pressed.connect(func(): spawn_player_requested.emit())
+	grid.add_child(btn_player)
+
+	var btn_enemy := Button.new()
+	btn_enemy.text = "🔴 Spawn Ennemi"
+	btn_enemy.pressed.connect(func(): spawn_enemy_requested.emit())
+	grid.add_child(btn_enemy)
+
+	var btn_base := Button.new()
+	btn_base.text = "🏰 Placer Base à défendre"
+	btn_base.pressed.connect(func(): base_requested.emit())
+	grid.add_child(btn_base)
+
+	# Section Chemins
+	var lbl_path := Label.new()
+	lbl_path.text = "— Chemins ennemis —"
+	lbl_path.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	grid.add_child(lbl_path)
+
+	var btn_path := Button.new()
+	btn_path.text = "🚩 Nouveau Chemin"
+	btn_path.pressed.connect(func(): new_path_requested.emit())
+	grid.add_child(btn_path)
+
+	for p in paths:
+		var lbl := Label.new()
+		var wps: Array = p.get("waypoints", [])
+		lbl.text = "  • %s (%d pts)" % [p.get("id", "?"), wps.size()]
+		grid.add_child(lbl)
+
+	# Section Unités
+	var lbl_unit := Label.new()
+	lbl_unit.text = "— Unités —"
+	lbl_unit.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	grid.add_child(lbl_unit)
+
+	for e in unit_entries:
+		var btn := Button.new()
+		btn.text = e.label
+		var key: StringName = e.key
+		btn.pressed.connect(func(): unit_selected.emit(key))
+		grid.add_child(btn)
 
 func texture_count() -> int:
 	return _tex_count
