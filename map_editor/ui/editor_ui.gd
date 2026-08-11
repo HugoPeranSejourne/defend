@@ -47,6 +47,7 @@ var _help_panel: PanelContainer
 var _import_dialog: FileDialog
 var _stack_check: CheckBox
 var _magnet_check: CheckBox
+var ai_modal: AIImporterModal
 
 func _ready() -> void:
 	layer = 10
@@ -132,6 +133,7 @@ func _build_chrome() -> void:
 	hb.add_child(_undo_btn)
 	hb.add_child(_redo_btn)
 	hb.add_child(_mk_button("🏠 Menu", func(): main_menu_requested.emit(), ""))
+	hb.add_child(_mk_button("🤖 Import IA", func(): ai_modal.popup_centered(), "Générer une carte depuis OpenStreetMap"))
 
 	# Toggles M4
 	_stack_check = CheckBox.new()
@@ -244,6 +246,9 @@ func _build_popups() -> void:
 	_import_dialog.filters = PackedStringArray(["*.png,*.jpg,*.jpeg,*.webp ; Images"])
 	_import_dialog.file_selected.connect(func(path: String): texture_import_requested.emit(path))
 	add_child(_import_dialog)
+
+	ai_modal = AIImporterModal.new()
+	add_child(ai_modal)
 
 func _build_help() -> void:
 	_help_panel = PanelContainer.new()
@@ -360,7 +365,7 @@ func _mk_button(text: String, cb: Callable, tooltip: String) -> Button:
 func is_modal_open() -> bool:
 	return _confirm_clear.visible or _confirm_quit.visible or _error_dialog.visible \
 		or _load_popup.visible or _context_popup.visible or _fatal.visible \
-		or _help_panel.visible or _import_dialog.visible
+		or _help_panel.visible or _import_dialog.visible or (ai_modal != null and ai_modal.visible)
 
 func set_status(text: String) -> void:
 	_status_label.text = text

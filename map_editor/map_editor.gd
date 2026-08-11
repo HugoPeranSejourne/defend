@@ -118,6 +118,18 @@ func _connect_ui() -> void:
 	ui.base_requested.connect(func(): state_machine.activate(&"base", {}))
 	ui.stack_toggled.connect(func(on: bool): stack_enabled = on; ui.set_status("📚 Empilement : %s" % ("ON" if on else "OFF")))
 	ui.magnet_toggled.connect(func(on: bool): magnet_enabled = on; ui.set_status("🧲 Magnétisme : %s" % ("ON" if on else "OFF")))
+	ui.ai_modal.map_generated.connect(_on_ai_map_generated)
+
+func _on_ai_map_generated(data: MapData) -> void:
+	if _dirty:
+		save_map()
+	map_data = data
+	current_map_path = ""
+	ui.set_map_name(data.meta_name)
+	_rebuild_from_data()
+	undo.clear()
+	_mark_dirty()
+	ui.set_status("🤖 Carte IA chargée : %d blocs, %d chemins — vérifiez puis 💾 Enregistrer" % [data.blocks.size(), data.enemy_paths.size()])
 
 func _on_catalog_selected(key: StringName) -> void:
 	var entry := catalog.get_entry(key)
@@ -855,9 +867,10 @@ func _build_environment() -> void:
 	sun.shadow_enabled = true
 	add_child(sun)
 
+	var dims: Vector2i = map_data.grid_dimensions if map_data else GRID_DIM
 	var ground := MeshInstance3D.new()
 	var pm := PlaneMesh.new()
-	pm.size = Vector2(GRID_DIM.x * GRID_CELL, GRID_DIM.y * GRID_CELL)
+	pm.size = Vector2(dims.x * GRID_CELL, dims.y * GRID_CELL)
 	ground.mesh = pm
 	var gm := StandardMaterial3D.new()
 	gm.albedo_color = Color(0.16, 0.18, 0.16)
@@ -872,13 +885,13 @@ func _build_environment() -> void:
 	lm.albedo_color = Color(0.3, 0.4, 0.5, 0.5)
 	lm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	im.surface_begin(Mesh.PRIMITIVE_LINES, lm)
-	var half_x := GRID_DIM.x * GRID_CELL * 0.5
-	var half_z := GRID_DIM.y * GRID_CELL * 0.5
-	for i in range(GRID_DIM.x + 1):
+	var half_x := dims.x * GRID_CELL * 0.5
+	var half_z := dims.y * GRID_CELL * 0.5
+	for i in range(dims.x + 1):
 		var x := -half_x + i * GRID_CELL
 		im.surface_add_vertex(Vector3(x, 0.01, -half_z))
 		im.surface_add_vertex(Vector3(x, 0.01, half_z))
-	for i in range(GRID_DIM.y + 1):
+	for i in range(dims.y + 1):
 		var z := -half_z + i * GRID_CELL
 		im.surface_add_vertex(Vector3(-half_x, 0.01, z))
 		im.surface_add_vertex(Vector3(half_x, 0.01, z))

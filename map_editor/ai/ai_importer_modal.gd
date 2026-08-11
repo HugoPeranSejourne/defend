@@ -1,0 +1,240 @@
+class_name AIImporterModal
+extends Window
+
+signal map_generated(data: MapData)
+
+var _orch: AIOrchestrator
+var _coords_edit: LineEdit
+var _height_spin: SpinBox
+var _name_edit: LineEdit
+var _gen_btn: Button
+var _apply_btn: Button
+var _regen_btn: Button
+var _progress: ProgressBar
+var _status: Label
+var _preview_rect: TextureRect
+var _stats: Label
+var _pending_data: MapData = null
+var _last_coords := Vector2(35.8893, -5.3213) # Ceuta par défaut
+
+func _ready() -> void:
+	title = "🤖 Import IA — OpenStreetMap"
+	size = Vector2i(640, 780)
+	transient = true
+	exclusive = true
+	visible = false
+	close_requested.connect(_on_cancel)
+
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.add_theme_constant_override("separation", 8)
+	add_child(vbox)
+
+	# --- Coordonnées ---
+	var lbl_coords := Label.new()
+	lbl_coords.text = "Coordonnées GPS (ou URL Google Maps collée) :"
+	vbox.add_child(lbl_coords)
+	var row := HBoxContainer.new()
+	vbox.add_child(row)
+	_coords_edit = LineEdit.new()
+	_coords_edit.text = "35.8893, -5.3213"
+	_coords_edit.placeholder_text = "35.8893, -5.3213"
+	_coords_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(_coords_edit)
+	var btn_ceuta := Button.new()
+	btn_ceuta.text = "📍 Ceuta"
+	btn_ceuta.pressed.connect(func(): _coords_edit.text = "35.8893, -5.3213")
+	row.add_child(btn_ceuta)
+
+	# --- Options ---
+	var row2 := HBoxContainer.new()
+	vbox.add_child(row2)
+	var lbl_h := Label.new()
+	lbl_h.text = "Hauteur par défaut (si OSM ne précise pas) :"
+	row2.add_child(lbl_h)
+	_height_spin = SpinBox.new()
+	_height_spin.min_value = 3.0
+	_height_spin.max_value = 30.0
+	_height_spin.step = 1.0
+	_height_spin.value = 6.0
+	_height_spin.suffix = " m"
+	row2.add_child(_height_spin)
+	var lbl_n := Label.new()
+	lbl_n.text = "   Nom :"
+	row2.add_child(lbl_n)
+	_name_edit = LineEdit.new()
+	_name_edit.text = "Ceuta_Centre"
+	_name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row2.add_child(_name_edit)
+
+	# --- Bouton Générer ---
+	_gen_btn = Button.new()
+	_gen_btn.text = "🚀 Générer depuis OpenStreetMap"
+	_gen_btn.pressed.connect(_on_generate)
+	vbox.add_child(_gen_btn)
+
+	# --- Progression ---
+	_progress = ProgressBar.new()
+	_progress.min_value = 0.0
+	_progress.max_value = 1.0
+	_progress.value = 0.0
+	vbox.add_child(_progress)
+	_status = Label.new()
+	_status.text = "En attente. Zone couverte : 512×512m (grille 256×256)."
+	_status.autowrap_mode = TextServer.AUTOWRAP_WORD
+	vbox.add_child(_status)
+
+	# --- Preview ---
+	_preview_rect = TextureRect.new()
+	_preview_rect.custom_minimum_size = Vector2(512, 300)
+	_preview_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_preview_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_preview_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	vbox.add_child(_preview_rect)
+	_stats = Label.new()
+	_stats.text = ""
+	vbox.add_child(_stats)
+
+	# --- Boutons finaux ---
+	var row3 := HBoxContainer.new()
+	row3.add_theme_constant_override("separation", 12)
+	vbox.add_child(row3)
+	_apply_btn = Button.new()
+	_apply_btn.text = "✅ Appliquer dans l'éditeur"
+	_apply_btn.disabled = true
+	_apply_btn.pressed.connect(_on_apply)
+	row3.add_child(_apply_btn)
+	_regen_btn = Button.new()
+	_regen_btn.text = "🔄 Régénérer (sans cache)"
+	_regen_btn.disabled = true
+	_regen_btn.pressed.connect(_on_regenerate)
+	row3.add_child(_regen_btn)
+	var cancel_btn := Button.new()
+	cancel_btn.text = "❌ Fermer"
+	cancel_btn.pressed.connect(_on_cancel)
+	row3.add_child(cancel_btn)
+
+	# --- Attribution légale ---
+	var attr := Label.new()
+	attr.text = "Données cartographiques © OpenStreetMap contributors (ODbL)"
+	attr.add_theme_font_size_override("font_size", 10)
+	attr.modulate = Color(1, 1, 1, 0.6)
+	vbox.add_child(attr)
+
+	# --- Orchestrateur ---
+	_orch = AIOrchestrator.new()
+	_orch.status_changed.connect(_on_status)
+	_orch.preview_ready.connect(_on_preview)
+	_orch.generation_failed.connect(_on_fail)
+	add_child(_orch)
+
+func _on_generate() -> void:
+	var coords := _parse_coords(_coords_edit.text)
+	if coords == Vector2.INF:
+		_status.text = "⛔ Coordonnées invalides. Format attendu : 35.8893, -5.3213"
+		return
+	_last_coords = coords
+	_pending_data = null
+	_apply_btn.disabled = true
+	_regen_btn.disabled = true
+	_gen_btn.disabled = true
+	_preview_rect.texture = null
+	_stats.text = ""
+	_orch.start(coords.x, coords.y, _height_spin.value, _name_edit.text.strip_edges())
+
+func _on_regenerate() -> void:
+	OSMFetcher.clear_cache(_last_coords.x, _last_coords.y)
+	_on_generate()
+
+func _on_apply() -> void:
+	if _pending_data != null:
+		map_generated.emit(_pending_data)
+		hide()
+
+func _on_cancel() -> void:
+	_orch.cancel()
+	_gen_btn.disabled = false
+	hide()
+
+func _on_status(msg: String, progress: float) -> void:
+	_status.text = msg
+	_progress.value = progress
+
+func _on_fail(reason: String) -> void:
+	_status.text = "⛔ " + reason
+	_progress.value = 0.0
+	_gen_btn.disabled = false
+
+func _on_preview(preview: Dictionary) -> void:
+	_pending_data = preview.data
+	_gen_btn.disabled = false
+	_apply_btn.disabled = false
+	_regen_btn.disabled = false
+	var data: MapData = preview.data
+	_stats.text = "%d blocs • %d cellules-route • %d chemins • %d spawns E • base : %s" % [
+		data.blocks.size(), preview.road_cells.size(), data.enemy_paths.size(),
+		data.enemy_spawns.size(), "oui" if data.has_base else "non"]
+	_render_preview(preview)
+
+func _render_preview(preview: Dictionary) -> void:
+	var img := Image.create(256, 256, false, Image.FORMAT_RGB8)
+	img.fill(Color(0.10, 0.10, 0.12))
+	for c in preview.open_cells:
+		_plot_cell(img, c, Color(0.20, 0.45, 0.25))
+	for c in preview.road_cells:
+		_plot_cell(img, c, Color(0.42, 0.42, 0.45))
+	for b in preview.blocks:
+		var t: float = clampf(b.height / 30.0, 0.0, 1.0)
+		var col := Color(0.55, 0.25, 0.20).lerp(Color(0.95, 0.60, 0.25), t)
+		for x in range(b.cell.x, b.cell.x + b.footprint.x):
+			for y in range(b.cell.y, b.cell.y + b.footprint.y):
+				_plot_cell(img, Vector2i(x, y), col)
+	var data: MapData = preview.data
+	for p in data.enemy_paths:
+		var wps: Array = p.waypoints
+		for i in range(wps.size() - 1):
+			_draw_line_world(img, wps[i], wps[i + 1], Color(1.0, 0.9, 0.2))
+	if data.has_base:
+		_plot_world(img, data.base_position, Color(0.3, 0.5, 1.0), 3)
+	for sp in data.enemy_spawns:
+		_plot_world(img, sp, Color(1.0, 0.2, 0.2), 2)
+	for sp in data.player_spawns:
+		_plot_world(img, sp, Color(0.2, 1.0, 0.3), 2)
+	_preview_rect.texture = ImageTexture.create_from_image(img)
+
+func _plot_cell(img: Image, c: Vector2i, col: Color) -> void:
+	var px := c.x + 128
+	var py := c.y + 128
+	if px >= 0 and px < 256 and py >= 0 and py < 256:
+		img.set_pixel(px, py, col)
+
+func _plot_world(img: Image, w: Vector3, col: Color, radius: int) -> void:
+	var cx := floori(w.x / 2.0) + 128
+	var cy := floori(w.z / 2.0) + 128
+	for dx in range(-radius, radius + 1):
+		for dy in range(-radius, radius + 1):
+			_plot_cell(img, Vector2i(cx - 128 + dx, cy - 128 + dy), col)
+
+func _draw_line_world(img: Image, a: Vector3, b: Vector3, col: Color) -> void:
+	var pa := Vector2(a.x / 2.0 + 128.0, a.z / 2.0 + 128.0)
+	var pb := Vector2(b.x / 2.0 + 128.0, b.z / 2.0 + 128.0)
+	var steps := maxi(1, int(pa.distance_to(pb)))
+	for i in range(steps + 1):
+		var p := pa.lerp(pb, float(i) / float(steps))
+		var px := int(p.x)
+		var py := int(p.y)
+		if px >= 0 and px < 256 and py >= 0 and py < 256:
+			img.set_pixel(px, py, col)
+
+func _parse_coords(text: String) -> Vector2:
+	text = text.strip_edges()
+	if text.contains("@"):
+		var after := text.get_slice("@", 1)
+		var parts := after.split(",")
+		if parts.size() >= 2 and parts[0].is_valid_float() and parts[1].is_valid_float():
+			return Vector2(parts[0].to_float(), parts[1].to_float())
+		return Vector2.INF
+	var parts2 := text.split(",")
+	if parts2.size() == 2 and parts2[0].strip_edges().is_valid_float() and parts2[1].strip_edges().is_valid_float():
+		return Vector2(parts2[0].strip_edges().to_float(), parts2[1].strip_edges().to_float())
+	return Vector2.INF
