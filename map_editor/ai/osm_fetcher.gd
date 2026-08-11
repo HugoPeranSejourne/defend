@@ -25,12 +25,12 @@ func fetch(lat: float, lng: float, bbox: String) -> void:
 			status_message.emit("📦 Cache local utilisé")
 			fetch_succeeded.emit(txt)
 			return
-	_query = "[out:json][timeout:60];(way[\"building\"](%s);way[\"highway\"](%s);way[\"leisure\"~\"park|playground\"](%s);node[\"place\"~\"square\"](%s););out geom;" % [bbox, bbox, bbox, bbox]
+	_query = "[out:json][timeout:25];(way[\"building\"](%s);way[\"highway\"](%s);way[\"leisure\"~\"park|playground\"](%s);node[\"place\"~\"square\"](%s););out geom;" % [bbox, bbox, bbox, bbox]
 	_mirror_idx = 0
 	_do_request()
 
 func cancel() -> void:
-	if _http:
+	if _http and is_instance_valid(_http):
 		_http.cancel_request()
 
 static func cache_path_for(lat: float, lng: float) -> String:
@@ -42,11 +42,14 @@ static func clear_cache(lat: float, lng: float) -> void:
 		DirAccess.remove_absolute(p)
 
 func _do_request() -> void:
-	if _http:
+	if _http and is_instance_valid(_http):
 		_http.queue_free()
 	_http = HTTPRequest.new()
-	_http.timeout = 70.0
-	add_child(_http)
+	_http.timeout = 35.0
+	if is_inside_tree():
+		add_child(_http)
+	elif Engine.get_main_loop() and Engine.get_main_loop().root:
+		Engine.get_main_loop().root.add_child(_http)
 	_http.request_completed.connect(_on_completed)
 	var err := _http.request(
 		MIRRORS[_mirror_idx],

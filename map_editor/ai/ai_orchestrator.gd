@@ -1,12 +1,10 @@
 class_name AIOrchestrator
 extends Node
 
-## Machine à états du pipeline. HTTP async + WorkerThreadPool pour la parsing & rasterisation.
-## Contrat threading : le worker ne touche JAMAIS au scene tree ;
-## le retour se fait par polling dans _process (thread principal).
+## Machine à états du pipeline. HTTP async + WorkerThreadPool pour le parsing & la rasterisation.
 
 signal status_changed(message: String, progress: float)
-signal preview_ready(preview: Dictionary) # {data, blocks, road_cells, open_cells}
+signal preview_ready(preview: Dictionary)
 signal generation_failed(reason: String)
 
 enum Step { IDLE, FETCHING, PARSING, RASTERIZING, GENERATING, DONE, FAILED }
@@ -20,10 +18,17 @@ var _cancelled := false
 var _projector: GeoProjector
 var _default_height := 6.0
 var _map_name := "Carte_IA"
-var _status_msg := ""
-var _status_prog := 0.0
+
+func _init() -> void:
+	_init_fetcher()
 
 func _ready() -> void:
+	if _fetcher and _fetcher.get_parent() == null:
+		add_child(_fetcher)
+
+func _init_fetcher() -> void:
+	if _fetcher != null:
+		return
 	_fetcher = OSMFetcher.new()
 	_fetcher.fetch_succeeded.connect(_on_fetch_ok)
 	_fetcher.fetch_failed.connect(func(reason: String):
@@ -35,7 +40,6 @@ func _ready() -> void:
 		print("[AIOrchestrator] ", msg)
 		status_changed.emit(msg, 0.15)
 	)
-	add_child(_fetcher)
 
 func start(lat: float, lng: float, default_height := 6.0, map_name := "Carte_IA") -> void:
 	_cancelled = false
@@ -43,6 +47,9 @@ func start(lat: float, lng: float, default_height := 6.0, map_name := "Carte_IA"
 	_map_name = map_name
 	_projector = GeoProjector.new(lat, lng, 2.0, 256)
 	_step = Step.FETCHING
+	_init_fetcher()
+	if is_inside_tree() and _fetcher.get_parent() == null:
+		add_child(_fetcher)
 	var msg := "📡 Téléchargement OpenStreetMap (512×512m)…"
 	print("[AIOrchestrator] Démarrage génération pour lat=%.5f, lng=%.5f" % [lat, lng])
 	status_changed.emit(msg, 0.1)
@@ -50,7 +57,8 @@ func start(lat: float, lng: float, default_height := 6.0, map_name := "Carte_IA"
 
 func cancel() -> void:
 	_cancelled = true
-	_fetcher.cancel()
+	if _fetcher:
+		_fetcher.cancel()
 	_step = Step.IDLE
 	print("[AIOrchestrator] Opération annulée par l'utilisateur.")
 
@@ -67,7 +75,6 @@ func _on_fetch_ok(json_text: String) -> void:
 	_task_id = WorkerThreadPool.add_task(_worker_process_all)
 
 func _worker_process_all() -> void:
-	# ⚠ Thread worker — données pures uniquement, aucun nœud Godot.
 	var t0 := Time.get_ticks_msec()
 	print("[AIOrchestrator Worker] Début parsing JSON OSM...")
 	var parsed := OSMParser.parse(_json_text, _projector, _default_height)
@@ -123,5 +130,5 @@ func _process(_delta: float) -> void:
 		else:
 			status_changed.emit("⚠ Carte générée avec avertissements : " + " • ".join(problems), 1.0)
 
-		print("[AIOrchestrator] ✅ Génération terminée avec succès ! Émission du signal preview_ready.")
+		print("[AIOrchestrator] ✅ Génération terminée avec succès !")
 		preview_ready.emit(_result)
