@@ -4,6 +4,7 @@ extends Node
 signal fetch_succeeded(json_text: String)
 signal fetch_failed(reason: String)
 signal status_message(message: String)
+signal log_emitted(message: String)
 
 const MIRRORS := [
 	"https://overpass-api.de/api/interpreter",
@@ -24,6 +25,7 @@ func fetch(lat: float, lng: float, bbox: String) -> void:
 	if FileAccess.file_exists(_cache_path):
 		var txt := FileAccess.get_file_as_string(_cache_path)
 		if txt.length() > 200 and txt.contains("\"elements\""):
+			_log("📦 Cache local trouvé : " + _cache_path)
 			status_message.emit("📦 Cache local utilisé")
 			fetch_succeeded.emit(txt)
 			return
@@ -34,6 +36,7 @@ func fetch(lat: float, lng: float, bbox: String) -> void:
 func cancel() -> void:
 	if _http and is_instance_valid(_http):
 		_http.cancel_request()
+		_log("⛔ Requête HTTP annulée")
 
 static func cache_path_for(lat: float, lng: float) -> String:
 	return "%s/%s.json" % [CACHE_DIR, "%.5f_%.5f" % [lat, lng]]
@@ -48,8 +51,6 @@ func _do_request() -> void:
 		_http.queue_free()
 		_http = null
 	_http = HTTPRequest.new()
-	# ★ FIX PRINCIPAL : DNS + TLS + transfert sur un thread dédié.
-	# Sans ça, la phase de connexion bloque le thread principal (beachball macOS).
 	_http.use_threads = true
 	_http.accept_gzip = true
 	_http.timeout = REQUEST_TIMEOUT
@@ -57,16 +58,17 @@ func _do_request() -> void:
 	_http.request_completed.connect(_on_completed)
 	var headers := [
 		"Content-Type: application/x-www-form-urlencoded",
-		"User-Agent: " + USER_AGENT,   # ★ exigé par la politique d'usage Overpass
+		"User-Agent: " + USER_AGENT,
 		"Accept: application/json",
 	]
-	print("[OSMFetcher] → requête %s" % MIRRORS[_mirror_idx])
+	_log("→ Connexion réseau : POST " + MIRRORS[_mirror_idx])
 	var err := _http.request(MIRRORS[_mirror_idx], headers, HTTPClient.METHOD_POST, "data=" + _query.uri_encode())
 	if err != OK:
+		_log("❌ Échec initialisation HTTP (code %d)" % err)
 		_try_next_mirror("erreur requête %d" % err)
 
 func _on_completed(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-	print("[OSMFetcher] ← résultat=%d code=%d octets=%d" % [result, code, body.size()])
+	_log("← Réponse reçue : résultat=%d, HTTP=%d, taille=%d octets" % [result, code, body.size()])
 	if result == HTTPRequest.RESULT_SUCCESS and code == 200:
 		var txt := body.get_string_from_utf8()
 		if txt.contains("\"elements\""):
@@ -74,6 +76,7 @@ func _on_completed(result: int, code: int, _headers: PackedStringArray, body: Pa
 			if f:
 				f.store_string(txt)
 				f.close()
+			_log("💾 Sauvegardé en cache disque local")
 			fetch_succeeded.emit(txt)
 			return
 		_try_next_mirror("réponse invalide (%d octets)" % body.size())
@@ -84,7 +87,15 @@ func _on_completed(result: int, code: int, _headers: PackedStringArray, body: Pa
 func _try_next_mirror(reason: String) -> void:
 	_mirror_idx += 1
 	if _mirror_idx < MIRRORS.size():
-		status_message.emit("⚠ Miroir %d indisponible (%s) — essai miroir %d…" % [_mirror_idx, reason, _mirror_idx + 1])
+		var msg := "⚠ Miroir %d indisponible (%s) — essai miroir %d…" % [_mirror_idx, reason, _mirror_idx + 1]
+		_log(msg)
+		status_message.emit(msg)
 		_do_request()
 	else:
-		fetch_failed.emit("Tous les miroirs Overpass ont échoué (%s).\nVérifiez votre connexion Internet." % reason)
+		var err_msg := "Tous les miroirs Overpass ont échoué (%s).\nVérifiez votre connexion Internet." % reason
+		_log("❌ " + err_msg)
+		fetch_failed.emit(err_msg)
+
+func _log(msg: String) -> void:
+	print("[OSMFetcher] ", msg)
+	log_emitted.emit(msg)

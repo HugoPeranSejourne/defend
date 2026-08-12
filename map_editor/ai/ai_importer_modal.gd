@@ -14,12 +14,14 @@ var _progress: ProgressBar
 var _status: Label
 var _preview_rect: TextureRect
 var _stats: Label
+var _log_console: TextEdit
+var _log_panel: VBoxContainer
 var _pending_data: MapData = null
 var _last_coords := Vector2(35.8893, -5.3213) # Ceuta par défaut
 
 func _ready() -> void:
 	title = "🤖 Import IA — OpenStreetMap"
-	size = Vector2i(640, 780)
+	size = Vector2i(680, 840)
 	transient = true
 	exclusive = false
 	visible = false
@@ -27,7 +29,7 @@ func _ready() -> void:
 
 	var vbox := VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.add_theme_constant_override("separation", 8)
+	vbox.add_theme_constant_override("separation", 6)
 	add_child(vbox)
 
 	# --- Coordonnées ---
@@ -84,9 +86,26 @@ func _ready() -> void:
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD
 	vbox.add_child(_status)
 
+	# --- Console de Logs en Direct ---
+	var toggle_log_btn := Button.new()
+	toggle_log_btn.text = "📟 Console de Logs en Direct (Temps Réel)"
+	toggle_log_btn.pressed.connect(func(): _log_panel.visible = not _log_panel.visible)
+	vbox.add_child(toggle_log_btn)
+
+	_log_panel = VBoxContainer.new()
+	_log_panel.visible = true
+	vbox.add_child(_log_panel)
+
+	_log_console = TextEdit.new()
+	_log_console.custom_minimum_size = Vector2(0, 140)
+	_log_console.editable = false
+	_log_console.selecting_enabled = true
+	_log_console.text = "--- Console de Logs Défend Europe IA ---\nPrêt.\n"
+	_log_panel.add_child(_log_console)
+
 	# --- Preview ---
 	_preview_rect = TextureRect.new()
-	_preview_rect.custom_minimum_size = Vector2(512, 300)
+	_preview_rect.custom_minimum_size = Vector2(512, 220)
 	_preview_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_preview_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_preview_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -126,7 +145,13 @@ func _ready() -> void:
 	_orch.status_changed.connect(_on_status)
 	_orch.preview_ready.connect(_on_preview)
 	_orch.generation_failed.connect(_on_fail)
+	_orch.log_emitted.connect(_append_log)
 	add_child(_orch)
+
+func _append_log(msg: String) -> void:
+	var time_str := Time.get_time_string_from_system()
+	_log_console.text += "[%s] %s\n" % [time_str, msg]
+	_log_console.scroll_vertical = _log_console.get_line_count()
 
 func _on_generate() -> void:
 	var coords := _parse_coords(_coords_edit.text)
@@ -140,9 +165,11 @@ func _on_generate() -> void:
 	_gen_btn.disabled = true
 	_preview_rect.texture = null
 	_stats.text = ""
+	_append_log("=== Lancement génération pour lat=%.5f, lng=%.5f ===" % [coords.x, coords.y])
 	_orch.start(coords.x, coords.y, _height_spin.value, _name_edit.text.strip_edges())
 
 func _on_regenerate() -> void:
+	_append_log("Nettoyage du cache disque pour lat=%.5f, lng=%.5f..." % [_last_coords.x, _last_coords.y])
 	OSMFetcher.clear_cache(_last_coords.x, _last_coords.y)
 	_on_generate()
 
@@ -164,6 +191,7 @@ func _on_fail(reason: String) -> void:
 	_status.text = "⛔ " + reason
 	_progress.value = 0.0
 	_gen_btn.disabled = false
+	_append_log("❌ ÉCHEC : " + reason)
 
 func _on_preview(preview: Dictionary) -> void:
 	_pending_data = preview.data
