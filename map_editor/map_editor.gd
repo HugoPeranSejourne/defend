@@ -804,11 +804,21 @@ func _rebuild_from_data() -> void:
 		c.queue_free()
 	for c in markers_root.get_children():
 		c.queue_free()
+	var old_ground := get_node_or_null("Ground_3D")
+	if old_ground:
+		old_ground.name = "Ground_3D_Deleting"
+		old_ground.queue_free()
+
 	_block_nodes.clear()
 	_marker_nodes.clear()
 	grid.clear()
 	grid.cell_size = map_data.grid_cell_size
 	grid.dimensions = map_data.grid_dimensions
+
+	var ground := MapRuntime.create_ground_node(map_data)
+	if ground:
+		add_child(ground)
+
 	selection.deselect()
 	_next_id = 1
 	_next_unit_id = 1

@@ -49,12 +49,27 @@ static func generate(raster: Dictionary, projector: GeoProjector, map_name: Stri
 	var p_cell := _find_free_cell_near(base_cell + Vector2i(4, 4), building_cells, 15)
 	data.player_spawns.append(projector.cell_center(p_cell))
 
-	# --- 4. Blocs (avec texturation Ceuta automatique) ---
+	# --- 4. Données de Sol (Routes & Espaces Verts 3D) ---
+	var r_arr: Array[Vector2i] = []
+	for rc in road_cells:
+		r_arr.append(rc)
+	data.road_cells = r_arr
+
+	var o_arr: Array[Vector2i] = []
+	for oc in open_cells:
+		o_arr.append(oc)
+	data.open_cells = o_arr
+
+	# --- 5. Blocs (avec texturation Ceuta automatique et filtrage bruit) ---
 	var bid := 1
 	for b in blocks:
 		var fp: Vector2i = b.footprint
 		var cell: Vector2i = b.cell
 		var h: float = b.height
+		# Filtrage du bruit 1x1 trop petit pour des pâtés de maisons nets
+		if fp.x * fp.y == 1 and h < 4.0:
+			continue
+
 		var tex := _assign_texture(h, fp, bid)
 		data.blocks.append({
 			"id": bid, "key": _catalog_key(fp), "cell": cell, "footprint": fp,

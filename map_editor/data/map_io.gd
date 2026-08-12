@@ -45,6 +45,8 @@ static func save_map(data: MapData, path: String) -> Error:
 		"units": units_json,
 		"has_base": data.has_base,
 		"base_position": _v3(data.base_position),
+		"road_cells": _vec2i_arr(data.road_cells),
+		"open_cells": _vec2i_arr(data.open_cells),
 	}
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
@@ -112,6 +114,8 @@ static func load_map(path: String) -> MapData:
 		})
 	data.has_base = bool(parsed.get("has_base", false))
 	data.base_position = _to_v3(parsed.get("base_position", [0, 0, 0]))
+	data.road_cells = _to_vec2i_arr(parsed.get("road_cells", []))
+	data.open_cells = _to_vec2i_arr(parsed.get("open_cells", []))
 	return data
 
 static func list_maps() -> PackedStringArray:
@@ -173,3 +177,16 @@ static func _to_v3(a: Array) -> Vector3:
 	if a.size() >= 3:
 		return Vector3(float(a[0]), float(a[1]), float(a[2]))
 	return Vector3.ZERO
+
+static func _vec2i_arr(arr: Array[Vector2i]) -> Array:
+	var out := []
+	for c in arr:
+		out.append([c.x, c.y])
+	return out
+
+static func _to_vec2i_arr(arr: Array) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for item in arr:
+		if item is Array and item.size() >= 2:
+			out.append(Vector2i(int(item[0]), int(item[1])))
+	return out
