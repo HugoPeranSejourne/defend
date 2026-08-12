@@ -94,15 +94,16 @@ static func point_in_polygon(p: Vector2, poly: PackedVector2Array) -> bool:
 static func merge_rectangles(mask: Dictionary) -> Array[Rect2i]:
 	var rects: Array[Rect2i] = []
 	var used := {}
+	const MAX_DIM := 512
 	for cell in mask:
 		if used.has(cell):
 			continue
 		var w := 0
-		while mask.has(cell + Vector2i(w, 0)) and not used.has(cell + Vector2i(w, 0)):
+		while w < MAX_DIM and mask.has(cell + Vector2i(w, 0)) and not used.has(cell + Vector2i(w, 0)):
 			w += 1
 		var h := 0
 		var grow := true
-		while grow:
+		while grow and h < MAX_DIM:
 			for x in w:
 				var probe: Vector2i = cell + Vector2i(x, h + 1)
 				if not mask.has(probe) or used.has(probe):

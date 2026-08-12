@@ -21,7 +21,7 @@ func _ready() -> void:
 	title = "🤖 Import IA — OpenStreetMap"
 	size = Vector2i(640, 780)
 	transient = true
-	exclusive = true
+	exclusive = false
 	visible = false
 	close_requested.connect(_on_cancel)
 

@@ -28,8 +28,9 @@ static func bfs_path(road_cells: Dictionary, from: Vector2i, to: Vector2i, extra
 	var came_from := {from: from}
 	var queue: Array[Vector2i] = [from]
 	var head := 0
+	const MAX_VISITED := 70000
 	var dirs := [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
-	while head < queue.size():
+	while head < queue.size() and came_from.size() < MAX_VISITED:
 		var cur := queue[head]
 		head += 1
 		for d in dirs:
