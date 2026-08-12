@@ -866,17 +866,38 @@ func _build_environment() -> void:
 	var env := WorldEnvironment.new()
 	var e := Environment.new()
 	var sky := Sky.new()
-	sky.sky_material = ProceduralSkyMaterial.new()
+	var psky := ProceduralSkyMaterial.new()
+	psky.sky_top_color = Color(0.35, 0.55, 0.85)
+	psky.sky_horizon_color = Color(0.70, 0.78, 0.88)
+	psky.ground_bottom_color = Color(0.2, 0.2, 0.22)
+	sky.sky_material = psky
 	e.background_mode = Environment.BG_SKY
 	e.sky = sky
+
+	# Éclairage Ambiant AAA + Tonemapping ACES + SSAO (Ombrage de contact 3D réel)
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	e.ambient_light_energy = 0.6
+	e.ambient_light_energy = 0.7
+	e.tonemap_mode = Environment.TONE_MAPPER_ACES
+	e.tonemap_exposure = 1.0
+
+	# Activations Graphiques AAA Godot 4
+	e.ssao_enabled = true
+	e.ssao_radius = 1.8
+	e.ssao_intensity = 2.5
+	e.glow_enabled = true
+	e.glow_intensity = 0.4
+	e.glow_bloom = 0.1
+
 	env.environment = e
 	add_child(env)
 
 	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-50, -30, 0)
+	sun.rotation_degrees = Vector3(-42, -35, 0)
+	sun.light_color = Color(1.0, 0.95, 0.88)
+	sun.light_energy = 1.3
 	sun.shadow_enabled = true
+	sun.shadow_blur = 1.5
+	sun.directional_shadow_max_distance = 600.0
 	add_child(sun)
 
 	var dims: Vector2i = map_data.grid_dimensions if map_data else GRID_DIM

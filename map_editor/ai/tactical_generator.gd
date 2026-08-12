@@ -77,6 +77,7 @@ static func generate(raster: Dictionary, projector: GeoProjector, map_name: Stri
 			"rot_y": 0.0,
 			"size": Vector3(fp.x * projector.cell_size, h, fp.y * projector.cell_size),
 			"texture": tex, "category": &"building", "base_y": 0.0,
+			"polygon": b.get("polygon", null),
 		})
 		bid += 1
 

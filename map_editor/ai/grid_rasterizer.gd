@@ -29,7 +29,7 @@ static func rasterize_buildings(buildings: Array, grid_cells: int, cell_size: fl
 		if mask.is_empty():
 			continue
 		for rect in merge_rectangles(mask):
-			blocks.append({"cell": rect.position, "footprint": rect.size, "height": b.height})
+			blocks.append({"cell": rect.position, "footprint": rect.size, "height": b.height, "polygon": poly})
 	return blocks
 
 static func rasterize_roads(roads: Array, grid_cells: int, cell_size: float, dilation := 1) -> Dictionary:

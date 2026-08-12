@@ -1,14 +1,12 @@
 class_name MapRuntime
 extends RefCounted
 
-## Fabrique de blocs et sol 3D partagée : l'éditeur ET le jeu construisent avec le même code.
+## Fabrique 3D AAA : Extrusion vectorielle lisse (Geometry2D), PBR Normal Maps et sol 3D.
 
 static func spawn_into(data: MapData, parent: Node3D, catalog: BlockCatalog, collision_layer := 1) -> void:
-	# Sol (Routes & Parcs)
 	var ground := create_ground_node(data)
 	if ground:
 		parent.add_child(ground)
-	# Bâtiments
 	for b in data.blocks:
 		parent.add_child(create_block_node(b, catalog, collision_layer))
 
@@ -25,27 +23,53 @@ static func create_block_node(block: Dictionary, catalog: BlockCatalog, collisio
 
 	var mi := MeshInstance3D.new()
 	mi.name = "Mesh"
-	
-	# Création du maillage à 2 surfaces : 0 = Murs (Façade), 1 = Toit (Neutre/Toiture)
-	var mesh := create_two_surface_box(size)
-	mi.mesh = mesh
-	mi.position.y = size.y * 0.5
 
-	# Matériau 0 : Murs (Façade)
+	var raw_poly: Variant = block.get("polygon", null)
+	var poly := PackedVector2Array()
+	if raw_poly is PackedVector2Array:
+		poly = raw_poly
+	elif raw_poly is Array:
+		for pt in raw_poly:
+			if pt is Vector2:
+				poly.append(pt)
+			elif pt is Array and pt.size() >= 2:
+				poly.append(Vector2(float(pt[0]), float(pt[1])))
+
+	var mesh: ArrayMesh
+	if poly.size() >= 3:
+		# Extrusion vectorielle lisse réelle (Fini la grille PS1 !)
+		mesh = create_extruded_polygon_mesh(poly, size.y, block.pos)
+		mi.position = Vector3.ZERO
+	else:
+		mesh = create_two_surface_box(size)
+		mi.position.y = size.y * 0.5
+
+	mi.mesh = mesh
+
+	# --- Matériau 0 : Façade PBR avec Normal Map (Relief 3D sous la lumière) ---
 	var mat_walls := StandardMaterial3D.new()
 	var tex_path: String = block.get("texture", "")
 	if tex_path != "" and ResourceLoader.exists(tex_path):
 		mat_walls.albedo_texture = load(tex_path) as Texture2D
 		mat_walls.albedo_color = Color.WHITE
 		mat_walls.uv1_triplanar = true
-		mat_walls.uv1_scale = Vector3(0.2, 0.2, 0.2)
-	else:
-		mat_walls.albedo_color = entry.get("color", Color(0.6, 0.5, 0.4))
+		mat_walls.uv1_scale = Vector3(0.18, 0.18, 0.18)
 
-	# Matériau 1 : Toit (Toiture neutre sans fenêtres)
+		# Chargement automatique de la Normal Map correspondante (_normal.png)
+		var norm_path := tex_path.get_basename() + "_normal.png"
+		if ResourceLoader.exists(norm_path):
+			mat_walls.normal_enabled = true
+			mat_walls.normal_texture = load(norm_path) as Texture2D
+			mat_walls.normal_scale = 1.2
+	else:
+		mat_walls.albedo_color = entry.get("color", Color(0.65, 0.55, 0.45))
+
+	mat_walls.roughness = 0.75
+
+	# --- Matériau 1 : Toiture Neutre Sombre (Béton / Tuiles) ---
 	var mat_roof := StandardMaterial3D.new()
-	mat_roof.albedo_color = Color(0.22, 0.23, 0.26)
-	mat_roof.roughness = 0.8
+	mat_roof.albedo_color = Color(0.20, 0.21, 0.24)
+	mat_roof.roughness = 0.85
 
 	mi.set_surface_override_material(0, mat_walls)
 	mi.set_surface_override_material(1, mat_roof)
@@ -62,41 +86,81 @@ static func create_block_node(block: Dictionary, catalog: BlockCatalog, collisio
 	root.add_child(body)
 	return root
 
-static func create_two_surface_box(size: Vector3) -> ArrayMesh:
-	var hx := size.x * 0.5
-	var hy := size.y * 0.5
-	var hz := size.z * 0.5
+static func create_extruded_polygon_mesh(world_poly: PackedVector2Array, height: float, origin_pos: Vector3) -> ArrayMesh:
+	# Convertir le polygone en coordonnées locales au nœud
+	var local_poly := PackedVector2Array()
+	for pt in world_poly:
+		local_poly.append(Vector2(pt.x - origin_pos.x, pt.y - origin_pos.z))
 
 	var mesh := ArrayMesh.new()
+	var n_pts := local_poly.size()
 
-	# --- Surface 0 : 4 Murs Verticaux ---
+	# --- Surface 0 : Murs Verticaux (Façades) ---
 	var st_walls := SurfaceTool.new()
 	st_walls.begin(Mesh.PRIMITIVE_TRIANGLES)
 
-	# Avant (-Z)
-	_add_quad(st_walls, Vector3(-hx, -hy, -hz), Vector3(hx, -hy, -hz), Vector3(hx, hy, -hz), Vector3(-hx, hy, -hz), Vector3(0, 0, -1))
-	# Arrière (+Z)
-	_add_quad(st_walls, Vector3(hx, -hy, hz), Vector3(-hx, -hy, hz), Vector3(-hx, hy, hz), Vector3(hx, hy, hz), Vector3(0, 0, 1))
-	# Gauche (-X)
-	_add_quad(st_walls, Vector3(-hx, -hy, hz), Vector3(-hx, -hy, -hz), Vector3(-hx, hy, -hz), Vector3(-hx, hy, hz), Vector3(-1, 0, 0))
-	# Droite (+X)
-	_add_quad(st_walls, Vector3(hx, -hy, -hz), Vector3(hx, -hy, hz), Vector3(hx, hy, hz), Vector3(hx, hy, -hz), Vector3(1, 0, 0))
+	for i in range(n_pts):
+		var p1 := local_poly[i]
+		var p2 := local_poly[(i + 1) % n_pts]
+		var dir := (p2 - p1).normalized()
+		var normal := Vector3(-dir.y, 0, dir.x) # Normale sortante
+
+		var v0 := Vector3(p1.x, 0.0, p1.y)
+		var v1 := Vector3(p2.x, 0.0, p2.y)
+		var v2 := Vector3(p2.x, height, p2.y)
+		var v3 := Vector3(p1.x, height, p1.y)
+
+		_add_quad(st_walls, v0, v1, v2, v3, normal)
 
 	st_walls.generate_normals()
 	mesh = st_walls.commit(mesh)
 
-	# --- Surface 1 : Toit (+Y) & Bas (-Y) ---
+	# --- Surface 1 : Toit (Triangulation Geometry2D) & Fond ---
 	var st_roof := SurfaceTool.new()
 	st_roof.begin(Mesh.PRIMITIVE_TRIANGLES)
 
-	# Toit (+Y)
-	_add_quad(st_roof, Vector3(-hx, hy, -hz), Vector3(hx, hy, -hz), Vector3(hx, hy, hz), Vector3(-hx, hy, hz), Vector3(0, 1, 0))
-	# Bas (-Y)
-	_add_quad(st_roof, Vector3(-hx, -hy, hz), Vector3(hx, -hy, hz), Vector3(hx, -hy, -hz), Vector3(-hx, -hy, -hz), Vector3(0, -1, 0))
+	var triangles := Geometry2D.triangulate_polygon(local_poly)
+	if triangles.size() >= 3:
+		st_roof.set_normal(Vector3(0, 1, 0))
+		for i in range(0, triangles.size(), 3):
+			var idx0: int = triangles[i]
+			var idx1: int = triangles[i + 1]
+			var idx2: int = triangles[i + 2]
+
+			var p0 := local_poly[idx0]
+			var p1 := local_poly[idx1]
+			var p2 := local_poly[idx2]
+
+			st_roof.set_uv(Vector2(p0.x * 0.1, p0.y * 0.1)); st_roof.add_vertex(Vector3(p0.x, height, p0.y))
+			st_roof.set_uv(Vector2(p1.x * 0.1, p1.y * 0.1)); st_roof.add_vertex(Vector3(p1.x, height, p1.y))
+			st_roof.set_uv(Vector2(p2.x * 0.1, p2.y * 0.1)); st_roof.add_vertex(Vector3(p2.x, height, p2.y))
 
 	st_roof.generate_normals()
 	mesh = st_roof.commit(mesh)
 
+	return mesh
+
+static func create_two_surface_box(size: Vector3) -> ArrayMesh:
+	var hx := size.x * 0.5
+	var hy := size.y * 0.5
+	var hz := size.z * 0.5
+	var mesh := ArrayMesh.new()
+
+	var st_walls := SurfaceTool.new()
+	st_walls.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_quad(st_walls, Vector3(-hx, -hy, -hz), Vector3(hx, -hy, -hz), Vector3(hx, hy, -hz), Vector3(-hx, hy, -hz), Vector3(0, 0, -1))
+	_add_quad(st_walls, Vector3(hx, -hy, hz), Vector3(-hx, -hy, hz), Vector3(-hx, hy, hz), Vector3(hx, hy, hz), Vector3(0, 0, 1))
+	_add_quad(st_walls, Vector3(-hx, -hy, hz), Vector3(-hx, -hy, -hz), Vector3(-hx, hy, -hz), Vector3(-hx, hy, hz), Vector3(-1, 0, 0))
+	_add_quad(st_walls, Vector3(hx, -hy, -hz), Vector3(hx, -hy, hz), Vector3(hx, hy, hz), Vector3(hx, hy, -hz), Vector3(1, 0, 0))
+	st_walls.generate_normals()
+	mesh = st_walls.commit(mesh)
+
+	var st_roof := SurfaceTool.new()
+	st_roof.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_add_quad(st_roof, Vector3(-hx, hy, -hz), Vector3(hx, hy, -hz), Vector3(hx, hy, hz), Vector3(-hx, hy, hz), Vector3(0, 1, 0))
+	_add_quad(st_roof, Vector3(-hx, -hy, hz), Vector3(hx, -hy, hz), Vector3(hx, -hy, -hz), Vector3(-hx, -hy, -hz), Vector3(0, -1, 0))
+	st_roof.generate_normals()
+	mesh = st_roof.commit(mesh)
 	return mesh
 
 static func _add_quad(st: SurfaceTool, p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3, normal: Vector3) -> void:
@@ -118,7 +182,6 @@ static func create_ground_node(data: MapData) -> Node3D:
 	root.name = "Ground_3D"
 	var cs := data.grid_cell_size
 
-	# 1. Routes (Asphalte / Trottoir)
 	if not data.road_cells.is_empty():
 		var mi_road := MeshInstance3D.new()
 		mi_road.name = "Roads"
@@ -137,12 +200,17 @@ static func create_ground_node(data: MapData) -> Node3D:
 			mat_road.albedo_texture = load(ptex) as Texture2D
 			mat_road.uv1_scale = Vector3(0.2, 0.2, 0.2)
 			mat_road.uv1_triplanar = true
+
+			var norm_path := "res://textures/ceuta_pavement_tile_normal.png"
+			if ResourceLoader.exists(norm_path):
+				mat_road.normal_enabled = true
+				mat_road.normal_texture = load(norm_path) as Texture2D
+				mat_road.normal_scale = 1.0
 		else:
 			mat_road.albedo_color = Color(0.35, 0.35, 0.38)
 		mi_road.material_override = mat_road
 		root.add_child(mi_road)
 
-	# 2. Espaces Verts / Parcs
 	if not data.open_cells.is_empty():
 		var mi_parks := MeshInstance3D.new()
 		mi_parks.name = "Parks"
@@ -156,7 +224,7 @@ static func create_ground_node(data: MapData) -> Node3D:
 		mi_parks.mesh = st_p.commit()
 
 		var mat_park := StandardMaterial3D.new()
-		mat_park.albedo_color = Color(0.20, 0.45, 0.25)
+		mat_park.albedo_color = Color(0.18, 0.42, 0.22)
 		mi_parks.material_override = mat_park
 		root.add_child(mi_parks)
 
