@@ -12,10 +12,10 @@ static func create_block_node(block: Dictionary, catalog: BlockCatalog, collisio
 	var entry := catalog.get_entry(block.key)
 	var size: Vector3 = block.size
 	var root := Node3D.new()
-	root.name = "Block_%d" % block.id
+	root.name = "Block_%d" % int(block.get("id", 0))
 	root.position = block.pos
-	root.rotation.y = block.rot_y
-	root.set_meta("block_id", block.id)
+	root.rotation.y = float(block.get("rot_y", 0.0))
+	root.set_meta("block_id", int(block.get("id", 0)))
 	root.set_meta("catalog_key", block.key)
 	root.set_meta("size", size)
 
@@ -24,10 +24,12 @@ static func create_block_node(block: Dictionary, catalog: BlockCatalog, collisio
 	mi.mesh = catalog.create_mesh(entry, size)
 	mi.position.y = size.y * 0.5
 	var mat := StandardMaterial3D.new()
-	var tex_path: String = block.texture
+	var tex_path: String = block.get("texture", "")
 	if tex_path != "" and ResourceLoader.exists(tex_path):
 		mat.albedo_texture = load(tex_path) as Texture2D
 		mat.albedo_color = Color.WHITE
+		mat.uv1_triplanar = true # Placage triplanaire parfait sur tous les murs 3D !
+		mat.uv1_scale = Vector3(0.15, 0.15, 0.15)
 	else:
 		mat.albedo_color = entry.get("color", Color.WHITE)
 	mi.material_override = mat

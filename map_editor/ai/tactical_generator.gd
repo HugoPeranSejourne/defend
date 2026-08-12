@@ -49,17 +49,19 @@ static func generate(raster: Dictionary, projector: GeoProjector, map_name: Stri
 	var p_cell := _find_free_cell_near(base_cell + Vector2i(4, 4), building_cells, 15)
 	data.player_spawns.append(projector.cell_center(p_cell))
 
-	# --- 4. Blocs ---
+	# --- 4. Blocs (avec texturation Ceuta automatique) ---
 	var bid := 1
 	for b in blocks:
 		var fp: Vector2i = b.footprint
 		var cell: Vector2i = b.cell
+		var h: float = b.height
+		var tex := _assign_texture(h, fp, bid)
 		data.blocks.append({
 			"id": bid, "key": _catalog_key(fp), "cell": cell, "footprint": fp,
 			"pos": projector.cell_center(cell) + Vector3((fp.x - 1) * projector.cell_size * 0.5, 0, (fp.y - 1) * projector.cell_size * 0.5),
 			"rot_y": 0.0,
-			"size": Vector3(fp.x * projector.cell_size, b.height, fp.y * projector.cell_size),
-			"texture": "", "category": &"building", "base_y": 0.0,
+			"size": Vector3(fp.x * projector.cell_size, h, fp.y * projector.cell_size),
+			"texture": tex, "category": &"building", "base_y": 0.0,
 		})
 		bid += 1
 
@@ -75,6 +77,19 @@ static func generate(raster: Dictionary, projector: GeoProjector, map_name: Stri
 		data.units.append({"id": uid, "key": &"enemy", "pos": data.enemy_spawns[i], "path_id": pid2, "directive": "attack"})
 		uid += 1
 	return data
+
+static func _assign_texture(height: float, fp: Vector2i, id: int) -> String:
+	var area := fp.x * fp.y
+	if height >= 18.0 or area >= 16:
+		var opts := [
+			"res://textures/ceuta_facade_blue_neoclassical.png",
+			"res://textures/ceuta_casa_dragones_facade.png",
+		]
+		return opts[id % opts.size()]
+	elif height >= 8.0 or area >= 6:
+		return "res://textures/ceuta_facade_terracotta.png"
+	else:
+		return "res://textures/ceuta_fortress_stone.png"
 
 static func _choose_base_cell(squares: Array, open_cells: Dictionary, building_cells: Dictionary, projector: GeoProjector) -> Vector2i:
 	var best_cell := Vector2i(9999, 9999)
