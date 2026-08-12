@@ -525,17 +525,19 @@ func _delete_marker(kind: String) -> void:
 				break
 	_rebuild_from_data()
 
-# ---------- Primitives internes blocs ----------
-
-func _do_add_block(block: Dictionary) -> void:
-	map_data.blocks.append(block)
+func _instantiate_block(block: Dictionary) -> void:
+	var bid: int = block.get("id", 0)
 	var fp: Vector2i = block.get("footprint", Vector2i.ONE)
 	var base_y: float = block.get("base_y", 0.0)
 	var size: Vector3 = block.get("size", Vector3(2, 2, 2))
-	grid.occupy_block(block.id, block.cell, fp, base_y, size.y)
+	grid.occupy_block(bid, block.cell, fp, base_y, size.y)
 	var n := MapRuntime.create_block_node(block, catalog, 2)
 	blocks_root.add_child(n)
-	_block_nodes[block.id] = n
+	_block_nodes[bid] = n
+
+func _do_add_block(block: Dictionary) -> void:
+	map_data.blocks.append(block)
+	_instantiate_block(block)
 	_mark_dirty()
 
 func _do_remove_block(id: int) -> void:
@@ -812,7 +814,7 @@ func _rebuild_from_data() -> void:
 	_next_unit_id = 1
 	_next_path_num = 1
 	for b in map_data.blocks:
-		_do_add_block(b)
+		_instantiate_block(b)
 		_next_id = maxi(_next_id, int(b.get("id", 0)) + 1)
 	for i in map_data.player_spawns.size():
 		var m := MarkerFactory.create_spawn_marker(map_data.player_spawns[i], true)
