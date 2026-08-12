@@ -1,7 +1,7 @@
 class_name MapRuntime
 extends RefCounted
 
-## Fabrique 3D AAA : Extrusion vectorielle lisse (Geometry2D), PBR Normal Maps et sol 3D.
+## Fabrique 3D AAA : Extrusion vectorielle lisse (Geometry2D), UVs ancrées et PBR.
 
 static func spawn_into(data: MapData, parent: Node3D, catalog: BlockCatalog, collision_layer := 1) -> void:
 	var ground := create_ground_node(data)
@@ -37,7 +37,6 @@ static func create_block_node(block: Dictionary, catalog: BlockCatalog, collisio
 
 	var mesh: ArrayMesh
 	if poly.size() >= 3:
-		# Extrusion vectorielle lisse réelle (Fini la grille PS1 !)
 		mesh = create_extruded_polygon_mesh(poly, size.y, block.pos)
 		mi.position = Vector3.ZERO
 	else:
@@ -46,16 +45,16 @@ static func create_block_node(block: Dictionary, catalog: BlockCatalog, collisio
 
 	mi.mesh = mesh
 
-	# --- Matériau 0 : Façade PBR avec Normal Map (Relief 3D sous la lumière) ---
+	# --- Matériau 0 : Façade PBR ancrée en coordonnées monde (Fini les textures qui glissent !) ---
 	var mat_walls := StandardMaterial3D.new()
 	var tex_path: String = block.get("texture", "")
 	if tex_path != "" and ResourceLoader.exists(tex_path):
 		mat_walls.albedo_texture = load(tex_path) as Texture2D
 		mat_walls.albedo_color = Color.WHITE
 		mat_walls.uv1_triplanar = true
+		mat_walls.uv1_triplanar_world_triplanar = true # ★ FIX : Ancrage World-Space fixe !
 		mat_walls.uv1_scale = Vector3(0.18, 0.18, 0.18)
 
-		# Chargement automatique de la Normal Map correspondante (_normal.png)
 		var norm_path := tex_path.get_basename() + "_normal.png"
 		if ResourceLoader.exists(norm_path):
 			mat_walls.normal_enabled = true
@@ -66,7 +65,7 @@ static func create_block_node(block: Dictionary, catalog: BlockCatalog, collisio
 
 	mat_walls.roughness = 0.75
 
-	# --- Matériau 1 : Toiture Neutre Sombre (Béton / Tuiles) ---
+	# --- Matériau 1 : Toiture Neutre Sombre ---
 	var mat_roof := StandardMaterial3D.new()
 	mat_roof.albedo_color = Color(0.20, 0.21, 0.24)
 	mat_roof.roughness = 0.85
@@ -87,7 +86,6 @@ static func create_block_node(block: Dictionary, catalog: BlockCatalog, collisio
 	return root
 
 static func create_extruded_polygon_mesh(world_poly: PackedVector2Array, height: float, origin_pos: Vector3) -> ArrayMesh:
-	# Convertir le polygone en coordonnées locales au nœud
 	var local_poly := PackedVector2Array()
 	for pt in world_poly:
 		local_poly.append(Vector2(pt.x - origin_pos.x, pt.y - origin_pos.z))
@@ -95,27 +93,33 @@ static func create_extruded_polygon_mesh(world_poly: PackedVector2Array, height:
 	var mesh := ArrayMesh.new()
 	var n_pts := local_poly.size()
 
-	# --- Surface 0 : Murs Verticaux (Façades) ---
+	# --- Surface 0 : Murs Verticaux (Façades avec UVs 2D explicites) ---
 	var st_walls := SurfaceTool.new()
 	st_walls.begin(Mesh.PRIMITIVE_TRIANGLES)
 
+	var u_accum := 0.0
 	for i in range(n_pts):
 		var p1 := local_poly[i]
 		var p2 := local_poly[(i + 1) % n_pts]
+		var wall_len := p1.distance_to(p2)
 		var dir := (p2 - p1).normalized()
-		var normal := Vector3(-dir.y, 0, dir.x) # Normale sortante
+		var normal := Vector3(-dir.y, 0, dir.x)
+
+		var u0 := u_accum * 0.2
+		var u1 := (u_accum + wall_len) * 0.2
+		u_accum += wall_len
 
 		var v0 := Vector3(p1.x, 0.0, p1.y)
 		var v1 := Vector3(p2.x, 0.0, p2.y)
 		var v2 := Vector3(p2.x, height, p2.y)
 		var v3 := Vector3(p1.x, height, p1.y)
 
-		_add_quad(st_walls, v0, v1, v2, v3, normal)
+		_add_quad_uv(st_walls, v0, v1, v2, v3, normal, u0, u1, 0.0, height * 0.2)
 
 	st_walls.generate_normals()
 	mesh = st_walls.commit(mesh)
 
-	# --- Surface 1 : Toit (Triangulation Geometry2D) & Fond ---
+	# --- Surface 1 : Toit (+Y) ---
 	var st_roof := SurfaceTool.new()
 	st_roof.begin(Mesh.PRIMITIVE_TRIANGLES)
 
@@ -174,6 +178,17 @@ static func _add_quad(st: SurfaceTool, p0: Vector3, p1: Vector3, p2: Vector3, p3
 	st.set_uv(Vector2(1, 0)); st.add_vertex(p2)
 	st.set_uv(Vector2(0, 0)); st.add_vertex(p3)
 
+static func _add_quad_uv(st: SurfaceTool, p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3, normal: Vector3, u0: float, u1: float, v0: float, v1: float) -> void:
+	st.set_normal(normal)
+	st.set_uv(Vector2(u0, v1)); st.add_vertex(p0)
+	st.set_uv(Vector2(u1, v1)); st.add_vertex(p1)
+	st.set_uv(Vector2(u1, v0)); st.add_vertex(p2)
+
+	st.set_normal(normal)
+	st.set_uv(Vector2(u0, v1)); st.add_vertex(p0)
+	st.set_uv(Vector2(u1, v0)); st.add_vertex(p2)
+	st.set_uv(Vector2(u0, v0)); st.add_vertex(p3)
+
 static func create_ground_node(data: MapData) -> Node3D:
 	if data.road_cells.is_empty() and data.open_cells.is_empty():
 		return null
@@ -200,6 +215,7 @@ static func create_ground_node(data: MapData) -> Node3D:
 			mat_road.albedo_texture = load(ptex) as Texture2D
 			mat_road.uv1_scale = Vector3(0.2, 0.2, 0.2)
 			mat_road.uv1_triplanar = true
+			mat_road.uv1_triplanar_world_triplanar = true
 
 			var norm_path := "res://textures/ceuta_pavement_tile_normal.png"
 			if ResourceLoader.exists(norm_path):
