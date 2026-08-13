@@ -72,7 +72,7 @@ static func generate(raster: Dictionary, projector: GeoProjector, map_name: Stri
 
 		var tex := _assign_texture(h, fp, bid)
 		data.blocks.append({
-			"id": bid, "key": _catalog_key(fp), "cell": cell, "footprint": fp,
+			"id": bid, "key": _catalog_key(fp, h), "cell": cell, "footprint": fp,
 			"pos": projector.cell_center(cell) + Vector3((fp.x - 1) * projector.cell_size * 0.5, 0, (fp.y - 1) * projector.cell_size * 0.5),
 			"rot_y": 0.0,
 			"size": Vector3(fp.x * projector.cell_size, h, fp.y * projector.cell_size),
@@ -141,10 +141,12 @@ static func _find_free_cell_near(center: Vector2i, occupied: Dictionary, max_rad
 					return c
 	return center
 
-static func _catalog_key(fp: Vector2i) -> StringName:
+static func _catalog_key(fp: Vector2i, height := 6.0) -> StringName:
 	var area := fp.x * fp.y
-	if area >= 16:
+	if height >= 16.0 or area >= 24:
+		return &"dragons"
+	elif area >= 16:
 		return &"hq"
-	if area >= 6:
+	elif area >= 6:
 		return &"bunker"
 	return &"wall"

@@ -1,7 +1,12 @@
 class_name MapRuntime
 extends RefCounted
 
-## Fabrique 3D AAA : Extrusion vectorielle lisse (Geometry2D), UVs ancrées et PBR.
+## Fabrique 3D AAA : Extrusion vectorielle lisse (Geometry2D), Landmarks 3D et PBR.
+
+const SCENE_LANDMARKS := {
+	&"dragons": "res://scenes/ceuta_casa_dragones.tscn",
+	&"asamblea": "res://scenes/ceuta_palacio_asamblea.tscn",
+}
 
 static func spawn_into(data: MapData, parent: Node3D, catalog: BlockCatalog, collision_layer := 1) -> void:
 	var ground := create_ground_node(data)
@@ -11,16 +16,31 @@ static func spawn_into(data: MapData, parent: Node3D, catalog: BlockCatalog, col
 		parent.add_child(create_block_node(b, catalog, collision_layer))
 
 static func create_block_node(block: Dictionary, catalog: BlockCatalog, collision_layer := 2) -> Node3D:
-	var entry := catalog.get_entry(block.key)
+	var bkey: StringName = block.key
 	var size: Vector3 = block.size
 	var root := Node3D.new()
 	root.name = "Block_%d" % int(block.get("id", 0))
 	root.position = block.pos
 	root.rotation.y = float(block.get("rot_y", 0.0))
 	root.set_meta("block_id", int(block.get("id", 0)))
-	root.set_meta("catalog_key", block.key)
+	root.set_meta("catalog_key", bkey)
 	root.set_meta("size", size)
 
+	# --- Support des Monuments & Landmarks 3D complexes (ex: Casa de los Dragones) ---
+	var scene_path: String = block.get("scene_path", "")
+	if scene_path == "" and SCENE_LANDMARKS.has(bkey):
+		scene_path = SCENE_LANDMARKS[bkey]
+
+	if scene_path != "" and ResourceLoader.exists(scene_path):
+		var scn := load(scene_path) as PackedScene
+		if scn:
+			var landmark_inst := scn.instantiate()
+			landmark_inst.name = "LandmarkModel"
+			root.add_child(landmark_inst)
+			return root
+
+	# --- Rendu Procédural standard ---
+	var entry := catalog.get_entry(bkey)
 	var mi := MeshInstance3D.new()
 	mi.name = "Mesh"
 
@@ -45,14 +65,14 @@ static func create_block_node(block: Dictionary, catalog: BlockCatalog, collisio
 
 	mi.mesh = mesh
 
-	# --- Matériau 0 : Façade PBR ancrée en coordonnées monde (Fini les textures qui glissent !) ---
+	# Matériau 0 : Façade PBR ancrée
 	var mat_walls := StandardMaterial3D.new()
 	var tex_path: String = block.get("texture", "")
 	if tex_path != "" and ResourceLoader.exists(tex_path):
 		mat_walls.albedo_texture = load(tex_path) as Texture2D
 		mat_walls.albedo_color = Color.WHITE
 		mat_walls.uv1_triplanar = true
-		mat_walls.uv1_triplanar_world_triplanar = true # ★ FIX : Ancrage World-Space fixe !
+		mat_walls.uv1_triplanar_world_triplanar = true
 		mat_walls.uv1_scale = Vector3(0.18, 0.18, 0.18)
 
 		var norm_path := tex_path.get_basename() + "_normal.png"
@@ -65,7 +85,7 @@ static func create_block_node(block: Dictionary, catalog: BlockCatalog, collisio
 
 	mat_walls.roughness = 0.75
 
-	# --- Matériau 1 : Toiture Neutre Sombre ---
+	# Matériau 1 : Toiture Neutre Sombre
 	var mat_roof := StandardMaterial3D.new()
 	mat_roof.albedo_color = Color(0.20, 0.21, 0.24)
 	mat_roof.roughness = 0.85
@@ -93,7 +113,6 @@ static func create_extruded_polygon_mesh(world_poly: PackedVector2Array, height:
 	var mesh := ArrayMesh.new()
 	var n_pts := local_poly.size()
 
-	# --- Surface 0 : Murs Verticaux (Façades avec UVs 2D explicites) ---
 	var st_walls := SurfaceTool.new()
 	st_walls.begin(Mesh.PRIMITIVE_TRIANGLES)
 
@@ -119,7 +138,6 @@ static func create_extruded_polygon_mesh(world_poly: PackedVector2Array, height:
 	st_walls.generate_normals()
 	mesh = st_walls.commit(mesh)
 
-	# --- Surface 1 : Toit (+Y) ---
 	var st_roof := SurfaceTool.new()
 	st_roof.begin(Mesh.PRIMITIVE_TRIANGLES)
 
@@ -187,7 +205,7 @@ static func _add_quad_uv(st: SurfaceTool, p0: Vector3, p1: Vector3, p2: Vector3,
 	st.set_normal(normal)
 	st.set_uv(Vector2(u0, v1)); st.add_vertex(p0)
 	st.set_uv(Vector2(u1, v0)); st.add_vertex(p2)
-	st.set_uv(Vector2(u0, v0)); st.add_vertex(p3)
+	st.set_uv(Vector2(0, 0)); st.add_vertex(p3)
 
 static func create_ground_node(data: MapData) -> Node3D:
 	if data.road_cells.is_empty() and data.open_cells.is_empty():
