@@ -4,6 +4,7 @@ extends Window
 signal map_generated(data: MapData)
 
 var _orch: AIOrchestrator
+var _facade_analyzer: Node
 var _coords_edit: LineEdit
 var _height_spin: SpinBox
 var _name_edit: LineEdit
@@ -16,12 +17,13 @@ var _preview_rect: TextureRect
 var _stats: Label
 var _log_console: TextEdit
 var _log_panel: VBoxContainer
+var _file_dialog: FileDialog
 var _pending_data: MapData = null
 var _last_coords := Vector2(35.8893, -5.3213) # Ceuta par défaut
 
 func _ready() -> void:
-	title = "🤖 Import IA — OpenStreetMap"
-	size = Vector2i(680, 840)
+	title = "🤖 Import IA & Street View — OpenStreetMap"
+	size = Vector2i(680, 880)
 	transient = true
 	exclusive = false
 	visible = false
@@ -71,9 +73,18 @@ func _ready() -> void:
 
 	# --- Bouton Générer ---
 	_gen_btn = Button.new()
-	_gen_btn.text = "🚀 Générer depuis OpenStreetMap"
+	_gen_btn.text = "🚀 Générer la Carte 3D depuis OpenStreetMap"
 	_gen_btn.pressed.connect(_on_generate)
 	vbox.add_child(_gen_btn)
+
+	# --- Section Import Façade Street View (IA Vision) ---
+	var street_box := HBoxContainer.new()
+	vbox.add_child(street_box)
+	var btn_streetview := Button.new()
+	btn_streetview.text = "📸 Importer une Photo de Façade Street View (IA)"
+	btn_streetview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_streetview.pressed.connect(_on_pick_streetview_photo)
+	street_box.add_child(btn_streetview)
 
 	# --- Progression ---
 	_progress = ProgressBar.new()
@@ -93,11 +104,11 @@ func _ready() -> void:
 	vbox.add_child(toggle_log_btn)
 
 	_log_panel = VBoxContainer.new()
-	_log_panel.visible = true
+	_log_panel.visible = false # Masqué par défaut pour économiser l'espace
 	vbox.add_child(_log_panel)
 
 	_log_console = TextEdit.new()
-	_log_console.custom_minimum_size = Vector2(0, 140)
+	_log_console.custom_minimum_size = Vector2(0, 120)
 	_log_console.editable = false
 	_log_console.selecting_enabled = true
 	_log_console.text = "--- Console de Logs Défend Europe IA ---\nPrêt.\n"
@@ -140,13 +151,43 @@ func _ready() -> void:
 	attr.modulate = Color(1, 1, 1, 0.6)
 	vbox.add_child(attr)
 
-	# --- Orchestrateur ---
+	# --- FileDialog pour l'import Street View ---
+	_file_dialog = FileDialog.new()
+	_file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	_file_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	_file_dialog.filters = PackedStringArray(["*.png, *.jpg, *.jpeg ; Images de Façades Street View"])
+	_file_dialog.title = "Sélectionner une photo de Façade Street View"
+	_file_dialog.size = Vector2i(700, 500)
+	_file_dialog.file_selected.connect(_on_streetview_photo_selected)
+	add_child(_file_dialog)
+
+	# --- Orchestrateur & Analyseur ---
 	_orch = AIOrchestrator.new()
 	_orch.status_changed.connect(_on_status)
 	_orch.preview_ready.connect(_on_preview)
 	_orch.generation_failed.connect(_on_fail)
 	_orch.log_emitted.connect(_append_log)
 	add_child(_orch)
+
+	var FacadeScript := load("res://map_editor/ai/facade_analyzer.gd")
+	if FacadeScript:
+		_facade_analyzer = FacadeScript.new()
+		_facade_analyzer.analysis_succeeded.connect(_on_facade_ok)
+		_facade_analyzer.analysis_failed.connect(_on_fail)
+		_facade_analyzer.status_message.connect(func(msg): _append_log(msg))
+		add_child(_facade_analyzer)
+
+func _on_pick_streetview_photo() -> void:
+	_file_dialog.popup_centered()
+
+func _on_streetview_photo_selected(path: String) -> void:
+	_append_log("📸 Analyse de la photo Street View sélectionnée : " + path)
+	var out_name := "facade_streetview_%d" % Time.get_ticks_msec()
+	_facade_analyzer.analyze_image_file(path, out_name)
+
+func _on_facade_ok(tex_path: String, metadata: Dictionary) -> void:
+	_append_log("✅ Texture de façade IA générée avec succès : " + tex_path)
+	_status.text = "✅ Façade Street View importée ! Disponible dans le catalogue de textures."
 
 func _append_log(msg: String) -> void:
 	var time_str := Time.get_time_string_from_system()
