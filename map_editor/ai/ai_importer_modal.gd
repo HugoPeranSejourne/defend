@@ -186,8 +186,12 @@ func _on_streetview_photo_selected(path: String) -> void:
 	_facade_analyzer.analyze_image_file(path, out_name)
 
 func _on_facade_ok(tex_path: String, metadata: Dictionary) -> void:
-	_append_log("✅ Texture de façade IA générée avec succès : " + tex_path)
-	_status.text = "✅ Façade Street View importée ! Disponible dans le catalogue de textures."
+	_append_log("✅ Texture de façade Street View importée avec succès : " + tex_path)
+	_status.text = "✅ Façade Street View importée ! Appliquée aux bâtiments 3D."
+	if _pending_data != null and not _pending_data.blocks.is_empty():
+		for b in _pending_data.blocks:
+			b.texture = tex_path
+		_append_log("🎨 Texture Street View appliquée à tous les %d bâtiments de la carte !" % _pending_data.blocks.size())
 
 func _append_log(msg: String) -> void:
 	var time_str := Time.get_time_string_from_system()
