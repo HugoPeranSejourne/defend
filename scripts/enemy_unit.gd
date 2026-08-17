@@ -15,6 +15,10 @@ signal enemy_died(enemy: EnemyUnit)
 @export var attack_rate: float = 1.2
 @export var attack_range: float = 18.0
 
+@export_group("Days Gone Swarm Escalade")
+@export var climb_speed: float = 4.8
+@export var max_climb_height: float = 14.0
+
 @export_group("Noeuds du Modèle 3D & Animation")
 @export var anim_player: AnimationPlayer
 @export var character_pivot: Node3D
@@ -36,14 +40,16 @@ var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 
 var _is_dying: bool = false
 var _glb_anim_player: AnimationPlayer = null
 
-# Système Anti-Blocage IA
+# Système Anti-Blocage IA & Escalade Swarm Days Gone
 var _last_unstuck_check_pos: Vector3 = Vector3.ZERO
 var _stuck_timer: float = 0.0
 
-# Système d'Escalade de Barricades Style World War Z
 var is_climbing_wall: bool = false
 var _current_wall: Node3D = null
 var _climb_target_y: float = 3.6
+var _climb_forward_dir: Vector3 = Vector3.FORWARD
+var _is_vaulting: bool = false
+var _vault_timer: float = 0.0
 
 # Dégâts localisés et état de santé des membres
 var is_limping: bool = false
@@ -66,11 +72,11 @@ func _ready() -> void:
 	health = max_health
 	stun_health = max_stun_health
 	_last_unstuck_check_pos = global_position
-	
+
 	var skel := find_child("Skeleton3D", true, false) as Skeleton3D
 	if skel:
 		skel.reset_bone_poses()
-		
+
 	_glb_anim_player = find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if _glb_anim_player and _glb_anim_player.has_animation("Idle"):
 		_glb_anim_player.play("Idle")
@@ -84,7 +90,7 @@ func _ready() -> void:
 			mat.albedo_color = Color(0.9, 0.25, 0.25, 1.0)
 			mat.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED
 			mesh_inst.set_surface_override_material(0, mat)
-	
+
 	is_melee = (randf() < 0.7)
 	if is_melee:
 		attack_range = 2.2
@@ -99,152 +105,126 @@ func _ready() -> void:
 		nav_agent.radius = 0.85
 		nav_agent.max_speed = base_move_speed
 		nav_agent.velocity_computed.connect(_on_velocity_computed)
-		
-	_play_anim("idle")
 
 func set_directive(dir: String, waypoints_list: Array = []) -> void:
 	tactical_directive = dir
 	waypoints = waypoints_list
 	_current_waypoint_idx = 0
-	_is_ambush_triggered = (dir != "AMBUSH")
 
 func get_current_move_speed() -> float:
-	return base_move_speed * 0.5 if is_limping else base_move_speed
+	var spd := base_move_speed
+	if is_limping:
+		spd *= 0.55
+	return spd
 
-func set_target_base(base_node: Node3D) -> void:
-	target_base = base_node
-	if nav_agent and target_base:
-		nav_agent.set_target_position(target_base.global_position)
-
-func take_damage(amount: float, bullet_dir: Vector3 = Vector3.ZERO, body_part: String = "") -> void:
+func take_damage(amount: float, bullet_dir: Vector3 = Vector3.ZERO, body_part: String = "torso") -> void:
 	if _is_dying:
 		return
 
-	_is_ambush_triggered = true # Déclenche l'embuscade s'il prend un coup
-
-	if body_part == "":
-		var parts: Array = BODY_PART_MULTIPLIERS.keys()
-		body_part = parts[randi() % parts.size()]
-		
 	_last_hit_part = body_part
 	var mult: float = BODY_PART_MULTIPLIERS.get(body_part, 1.0)
 	var final_damage := amount * mult
 
-	if body_part.begins_with("thigh_") or body_part.begins_with("calf_") or body_part.begins_with("pelvis_"):
+	health = max(0.0, health - final_damage)
+	stun_health = max(0.0, stun_health - final_damage * 1.5)
+
+	# Interruption de l'escalade si touché en montant le mur
+	if is_climbing_wall:
+		collapse_from_wall()
+
+	if body_part.begins_with("thigh") or body_part.begins_with("calf") or body_part.begins_with("pelvis"):
 		is_limping = true
-	elif body_part.begins_with("shoulder_") or body_part.begins_with("bicep_") or body_part.begins_with("forearm_"):
+	elif body_part.begins_with("shoulder") or body_part.begins_with("bicep") or body_part.begins_with("forearm"):
 		is_arm_injured = true
 
-	health = max(0.0, health - final_damage)
-	
-	if bullet_dir != Vector3.ZERO:
-		_knockback_velocity += bullet_dir.normalized() * randf_range(6.0, 12.0)
-	else:
-		_knockback_velocity += -transform.basis.z * randf_range(5.0, 9.0)
-		
-	_stagger_timer = randf_range(0.2, 0.35)
-	_flash_color(Color(1.0, 0.25, 0.25))
-	
+	if bullet_dir.length_squared() > 0.001:
+		_knockback_velocity += bullet_dir.normalized() * randf_range(4.0, 9.0)
+
+	_stagger_timer = 0.25
+	_flash_red_hit()
+
 	if health <= 0:
-		_die_lethal()
+		_die(bullet_dir)
 
-func take_non_lethal_damage(amount: float, bullet_dir: Vector3 = Vector3.ZERO) -> void:
+func take_non_lethal_damage(stun_amount: float, hit_dir: Vector3 = Vector3.ZERO) -> void:
 	if _is_dying:
 		return
+	stun_health = max(0.0, stun_health - stun_amount)
+	_stagger_timer = 0.4
+	if hit_dir.length_squared() > 0.001:
+		_knockback_velocity += hit_dir.normalized() * 5.0
+	_flash_blue_hit()
 
-	_is_ambush_triggered = true
+	if is_climbing_wall:
+		collapse_from_wall()
 
-	stun_health = max(0.0, stun_health - amount)
-	
-	if bullet_dir != Vector3.ZERO:
-		_knockback_velocity += bullet_dir.normalized() * randf_range(4.0, 8.0)
-		
-	_stagger_timer = 0.2
-	_flash_color(Color(0.2, 0.85, 1.0))
-	
-	if stun_health <= 0:
-		_pacify_non_lethal()
+	if stun_health <= 0.0:
+		_die(hit_dir, true)
 
-func _flash_color(col: Color) -> void:
-	if character_pivot:
-		var orig_scale := Vector3.ONE
-		character_pivot.scale = Vector3(1.15, 0.9, 1.15)
-		var timer := get_tree().create_timer(0.08)
-		timer.timeout.connect(func(): if is_instance_valid(character_pivot): character_pivot.scale = orig_scale)
+func _flash_red_hit() -> void:
+	var mesh_inst := find_child("vanguard_Mesh", true, false) as MeshInstance3D
+	if mesh_inst:
+		var orig_mat := mesh_inst.get_active_material(0)
+		if orig_mat and orig_mat is StandardMaterial3D:
+			orig_mat.albedo_color = Color(1.0, 0.9, 0.2, 1.0)
+			var timer := get_tree().create_timer(0.08)
+			timer.timeout.connect(func():
+				if is_instance_valid(orig_mat):
+					orig_mat.albedo_color = Color(0.9, 0.25, 0.25, 1.0)
+			)
 
-func _die_lethal() -> void:
+func _flash_blue_hit() -> void:
+	var mesh_inst := find_child("vanguard_Mesh", true, false) as MeshInstance3D
+	if mesh_inst:
+		var orig_mat := mesh_inst.get_active_material(0)
+		if orig_mat and orig_mat is StandardMaterial3D:
+			orig_mat.albedo_color = Color(0.2, 0.8, 1.0, 1.0)
+			var timer := get_tree().create_timer(0.12)
+			timer.timeout.connect(func():
+				if is_instance_valid(orig_mat):
+					orig_mat.albedo_color = Color(0.9, 0.25, 0.25, 1.0)
+			)
+
+func _die(bullet_dir: Vector3 = Vector3.ZERO, is_non_lethal := false) -> void:
 	if _is_dying:
 		return
 	_is_dying = true
-	
+	if is_climbing_wall:
+		collapse_from_wall()
 	remove_from_group("enemies")
-	
-	var stages := get_tree().get_nodes_in_group("main_stages")
-	if not stages.is_empty() and stages[0].has_method("adjust_public_opinion"):
-		stages[0].adjust_public_opinion(-1.5)
-
-	var build_mgrs := get_tree().get_nodes_in_group("build_managers")
-	if not build_mgrs.is_empty() and build_mgrs[0].has_method("add_credits"):
-		build_mgrs[0].add_credits(25)
+	enemy_died.emit(self)
 
 	var corpse_mgrs := get_tree().get_nodes_in_group("corpse_managers")
 	if not corpse_mgrs.is_empty() and corpse_mgrs[0].has_method("add_corpse"):
 		corpse_mgrs[0].call("add_corpse", global_position, rotation.y, true)
 
-	emit_signal("enemy_died", self)
-	_create_death_particles(Color(1.0, 0.25, 0.1))
 	queue_free()
 
-func _pacify_non_lethal() -> void:
-	if _is_dying:
+func start_days_gone_climb(target_y: float, wall_node: Node3D = null) -> void:
+	if is_climbing_wall or _is_dying:
 		return
-	_is_dying = true
-	
-	remove_from_group("enemies")
+	is_climbing_wall = true
+	_climb_target_y = target_y
+	_current_wall = wall_node
+	_climb_forward_dir = -transform.basis.z.normalized()
+	_is_vaulting = false
 
-	var stages := get_tree().get_nodes_in_group("main_stages")
-	if not stages.is_empty() and stages[0].has_method("adjust_public_opinion"):
-		stages[0].adjust_public_opinion(0.5)
-
-	var build_mgrs := get_tree().get_nodes_in_group("build_managers")
-	if not build_mgrs.is_empty() and build_mgrs[0].has_method("add_credits"):
-		build_mgrs[0].add_credits(25)
-
-	var corpse_mgrs := get_tree().get_nodes_in_group("corpse_managers")
-	if not corpse_mgrs.is_empty() and corpse_mgrs[0].has_method("add_corpse"):
-		corpse_mgrs[0].call("add_corpse", global_position, rotation.y, true)
-
-	emit_signal("enemy_died", self)
-	_create_death_particles(Color(0.2, 0.9, 1.0))
-	queue_free()
-
-func _create_death_particles(particle_color: Color) -> void:
-	var spark := MeshInstance3D.new()
-	var sphere := SphereMesh.new()
-	sphere.radius = 0.4
-	sphere.height = 0.8
-	
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_color = particle_color
-	sphere.material = mat
-	
-	spark.mesh = sphere
-	get_tree().root.add_child(spark)
-	spark.global_position = global_position + Vector3(0, 0.4, 0)
-	
-	var timer := get_tree().create_timer(0.2)
-	timer.timeout.connect(spark.queue_free)
+	if is_instance_valid(_current_wall) and _current_wall.has_method("register_climber"):
+		_current_wall.call("register_climber", self)
+		var lat_offset := (randf() - 0.5) * 0.9
+		global_position += transform.basis.x * lat_offset
 
 func collapse_from_wall() -> void:
 	if is_climbing_wall:
 		is_climbing_wall = false
+		_is_vaulting = false
+		if character_pivot:
+			character_pivot.rotation = Vector3.ZERO
 		if is_instance_valid(_current_wall) and _current_wall.has_method("unregister_climber"):
 			_current_wall.call("unregister_climber", self)
-		_current_wall = null
-		global_position.y = 0.0
-		_stagger_timer = 0.5
-		_knockback_velocity = -transform.basis.z * 6.0
+			_current_wall = null
+		_stagger_timer = 0.6
+		_knockback_velocity = -_climb_forward_dir * 5.0 + Vector3(0, 3.5, 0)
 
 func _play_anim(anim_name: String) -> void:
 	if _is_dying or not _glb_anim_player:
@@ -253,7 +233,6 @@ func _play_anim(anim_name: String) -> void:
 	match anim_name:
 		"run": target_anim = "Run"
 		"walk": target_anim = "Walk"
-		"walk_backward": target_anim = "Walk"
 		"idle": target_anim = "Idle"
 		_: target_anim = "Idle"
 
@@ -263,43 +242,56 @@ func _play_anim(anim_name: String) -> void:
 func _physics_process(delta: float) -> void:
 	if _is_dying:
 		return
-		
+
 	if _attack_cooldown > 0.0:
 		_attack_cooldown -= delta
 	if _stagger_timer > 0.0:
 		_stagger_timer -= delta
-		
+
 	_knockback_velocity = _knockback_velocity.lerp(Vector3.ZERO, delta * 10.0)
 
-	# Gestion d'embuscade
-	if tactical_directive == "AMBUSH" and not _is_ambush_triggered:
-		var units_close := get_tree().get_nodes_in_group("units")
-		for u in units_close:
-			if is_instance_valid(u) and u is Node3D:
-				if global_position.distance_to((u as Node3D).global_position) <= 12.0:
-					_is_ambush_triggered = true
-					break
-		if not _is_ambush_triggered:
-			_play_anim("idle")
+	# --- Escalade Procédurale Days Gone Swarm ---
+	if is_climbing_wall:
+		if _is_vaulting:
+			_vault_timer -= delta
+			global_position += _climb_forward_dir * delta * 4.0
+			if character_pivot:
+				character_pivot.rotation.x = lerp_angle(character_pivot.rotation.x, 0.0, delta * 12.0)
+				character_pivot.rotation.z = lerp_angle(character_pivot.rotation.z, 0.0, delta * 12.0)
+			if _vault_timer <= 0.0:
+				_is_vaulting = false
+				is_climbing_wall = false
+				if is_instance_valid(_current_wall) and _current_wall.has_method("unregister_climber"):
+					_current_wall.call("unregister_climber", self)
+					_current_wall = null
 			return
 
-	# Escalade de Barricades
-	if is_climbing_wall:
+		# Ascension verticale rythmée avec oscillation de grimpette
+		global_position.y += delta * climb_speed
+		global_position += _climb_forward_dir * delta * 0.45
+
 		_play_anim("run")
-		global_position.y += delta * 3.5
-		global_position += transform.basis.z * delta * 1.5
-		
+
+		if character_pivot:
+			var climb_time := Time.get_ticks_msec() * 0.016
+			var sway := sin(climb_time) * 0.24
+			var pitch := deg_to_rad(22.0)
+			character_pivot.rotation = Vector3(pitch, 0.0, sway)
+
+		# Franchissement de la corniche / du sommet du barrage
 		if global_position.y >= _climb_target_y:
-			is_climbing_wall = false
-			global_position.y = 0.0
-			global_position += transform.basis.z * 2.5
-			if is_instance_valid(_current_wall) and _current_wall.has_method("unregister_climber"):
-				_current_wall.call("unregister_climber", self)
-				_current_wall = null
+			_is_vaulting = true
+			_vault_timer = 0.35
+			global_position.y = _climb_target_y + 0.25
+			if character_pivot:
+				character_pivot.rotation = Vector3(deg_to_rad(-18.0), 0, 0)
 		return
 
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
+
+	# Recherche d'obstacles / murs devant l'ennemi pour déclencher l'escalade
+	_check_and_probe_wall_climb()
 
 	# Recherche de la Base HQ
 	if not is_instance_valid(target_base):
@@ -309,10 +301,10 @@ func _physics_process(delta: float) -> void:
 
 	var target_to_attack: Node3D = target_base
 	var closest_dist: float = 99999.0
-	
+
 	if is_instance_valid(target_base):
 		closest_dist = global_position.distance_to(target_base.global_position)
-		
+
 	var units := get_tree().get_nodes_in_group("units")
 	for unit in units:
 		if is_instance_valid(unit) and unit is Node3D:
@@ -328,13 +320,13 @@ func _physics_process(delta: float) -> void:
 		velocity.x = _knockback_velocity.x
 		velocity.z = _knockback_velocity.z
 		move_and_slide()
-		
+
 		var dir := (target_to_attack.global_position - global_position).normalized()
 		var target_angle := atan2(dir.x, dir.z)
 		rotation.y = lerp_angle(rotation.y, target_angle, delta * rotation_speed)
-		
+
 		_play_anim("idle")
-		
+
 		if _attack_cooldown <= 0.0 and _stagger_timer <= 0.0:
 			var cd := attack_rate * 1.4 if is_arm_injured else attack_rate
 			_attack_cooldown = cd
@@ -365,21 +357,39 @@ func _physics_process(delta: float) -> void:
 			var next_pos := nav_agent.get_next_path_position()
 			var dir := (next_pos - global_position)
 			dir.y = 0.0
-			
+
 			if dir.length_squared() > 0.001:
 				dir = dir.normalized()
 				var target_vel := dir * active_speed
 				var target_angle := atan2(dir.x, dir.z)
 				rotation.y = lerp_angle(rotation.y, target_angle, delta * rotation_speed)
-				
+
 				_play_anim("run")
-				
+
 				if nav_agent.avoidance_enabled:
 					nav_agent.set_velocity(target_vel)
 				else:
 					velocity.x = target_vel.x + _knockback_velocity.x
 					velocity.z = target_vel.z + _knockback_velocity.z
 					move_and_slide()
+
+func _check_and_probe_wall_climb() -> void:
+	if is_climbing_wall or _is_dying:
+		return
+
+	if is_on_wall():
+		for i in get_slide_collision_count():
+			var col := get_slide_collision(i)
+			var collider := col.get_collider() as Node3D
+			if collider:
+				var wall_top := global_position.y + 3.5
+				if collider is BarricadeWall:
+					wall_top = global_position.y + (collider as BarricadeWall).wall_height
+				elif collider.has_meta("size"):
+					var sz: Vector3 = collider.get_meta("size")
+					wall_top = collider.global_position.y + sz.y
+				start_days_gone_climb(wall_top, collider)
+				break
 
 func _perform_machete_attack(target: Node3D) -> void:
 	if not is_instance_valid(target):
@@ -391,33 +401,33 @@ func _perform_machete_attack(target: Node3D) -> void:
 func _enemy_shoot_target(target: Node3D) -> void:
 	if not is_instance_valid(target):
 		return
-		
+
 	var origin := global_position + Vector3(0, 1.3, 0)
 	var target_pos := target.global_position + Vector3(0, 1.0, 0)
-	
+
 	_play_anim("idle")
-	
+
 	if target.has_method("take_damage"):
 		target.call("take_damage", attack_damage, Vector3.ZERO, "")
-		
+
 	_create_enemy_laser_tracer(origin, target_pos)
 
 func _create_enemy_laser_tracer(from: Vector3, to: Vector3) -> void:
 	var mesh_instance_line := MeshInstance3D.new()
 	var immediate_mesh := ImmediateMesh.new()
 	var mat := StandardMaterial3D.new()
-	
+
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.albedo_color = Color(1.0, 0.15, 0.15, 0.9)
-	
+
 	immediate_mesh.surface_begin(Mesh.PRIMITIVE_LINES, mat)
 	immediate_mesh.surface_add_vertex(from)
 	immediate_mesh.surface_add_vertex(to)
 	immediate_mesh.surface_end()
-	
+
 	mesh_instance_line.mesh = immediate_mesh
 	get_tree().root.add_child(mesh_instance_line)
-	
+
 	var timer := get_tree().create_timer(0.05)
 	timer.timeout.connect(mesh_instance_line.queue_free)
 
