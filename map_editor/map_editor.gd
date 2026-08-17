@@ -119,6 +119,15 @@ func _connect_ui() -> void:
 	ui.stack_toggled.connect(func(on: bool): stack_enabled = on; ui.set_status("📚 Empilement : %s" % ("ON" if on else "OFF")))
 	ui.magnet_toggled.connect(func(on: bool): magnet_enabled = on; ui.set_status("🧲 Magnétisme : %s" % ("ON" if on else "OFF")))
 	ui.ai_modal.map_generated.connect(_on_ai_map_generated)
+	ui.ai_modal.iconic_building_created.connect(_on_iconic_building_created)
+
+func _on_iconic_building_created(entry: Dictionary) -> void:
+	var key: StringName = entry.key
+	var label: String = entry.label
+	var tex_path: String = entry.get("texture", "")
+	var reg := catalog.register_iconic_building(key, label, tex_path)
+	ui.add_iconic_building_button(reg)
+	ui.set_status("🏛️ Bâtiment classé '%s' ajouté au menu 'Iconic Buildings' !" % label)
 
 func _on_ai_map_generated(data: MapData) -> void:
 	if _dirty:

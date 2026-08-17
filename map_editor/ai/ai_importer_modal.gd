@@ -185,13 +185,28 @@ func _on_streetview_photo_selected(path: String) -> void:
 	var out_name := "facade_streetview_%d" % Time.get_ticks_msec()
 	_facade_analyzer.analyze_image_file(path, out_name)
 
+signal iconic_building_created(entry: Dictionary)
+
 func _on_facade_ok(tex_path: String, metadata: Dictionary) -> void:
-	_append_log("✅ Texture de façade Street View importée avec succès : " + tex_path)
-	_status.text = "✅ Façade Street View importée ! Appliquée aux bâtiments 3D."
+	var real_name: String = metadata.get("real_name", "Bâtiment Emblématique")
+	var key: StringName = metadata.get("key", &"iconic_custom")
+	_append_log("✅ Bâtiment classé par l'IA sous le nom : '%s' (clef: %s)" % [real_name, key])
+	_status.text = "🏛️ Bâtiment '%s' classé et ajouté au menu 'Iconic Buildings' !" % real_name
+
+	var entry := {
+		"key": key,
+		"label": "🏛️ " + real_name,
+		"category": &"iconic_buildings",
+		"texture": tex_path,
+		"size": Vector3(12, 16, 12)
+	}
+
+	iconic_building_created.emit(entry)
+
 	if _pending_data != null and not _pending_data.blocks.is_empty():
 		for b in _pending_data.blocks:
 			b.texture = tex_path
-		_append_log("🎨 Texture Street View appliquée à tous les %d bâtiments de la carte !" % _pending_data.blocks.size())
+		_append_log("🎨 Texture '%s' appliquée à tous les %d bâtiments !" % [real_name, _pending_data.blocks.size()])
 
 func _append_log(msg: String) -> void:
 	var time_str := Time.get_time_string_from_system()

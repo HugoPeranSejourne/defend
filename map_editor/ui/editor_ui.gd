@@ -28,6 +28,7 @@ var _status_label: Label
 var _coords_label: Label
 var _name_edit: LineEdit
 var _tabs: TabContainer
+var _tab_iconic: GridContainer
 var _tab_buildings: GridContainer
 var _tab_shapes: GridContainer
 var _tab_textures: GridContainer
@@ -56,6 +57,7 @@ func _ready() -> void:
 	_build_help()
 
 func setup(entries: Array[Dictionary], textures: PackedStringArray, unit_entries: Array[Dictionary], paths: Array[Dictionary]) -> void:
+	_tab_iconic = _mk_tab("🏛️ Iconic Buildings")
 	_tab_buildings = _mk_tab("🏢 Bâtiments")
 	_tab_shapes = _mk_tab("📐 Formes 3D")
 	_tab_textures = _mk_tab("🎨 Textures")
@@ -68,7 +70,9 @@ func setup(entries: Array[Dictionary], textures: PackedStringArray, unit_entries
 		btn.tooltip_text = "Taille : %s m" % str(e.size)
 		var key: StringName = e.key
 		btn.pressed.connect(func(): catalog_selected.emit(key))
-		if e.category == &"building":
+		if e.category == &"iconic_buildings" or e.category == &"monument":
+			_tab_iconic.add_child(btn)
+		elif e.category == &"building":
 			_tab_buildings.add_child(btn)
 		else:
 			_tab_shapes.add_child(btn)
@@ -94,6 +98,21 @@ func setup(entries: Array[Dictionary], textures: PackedStringArray, unit_entries
 
 func texture_count() -> int:
 	return _tex_count
+
+func add_iconic_building_button(entry: Dictionary) -> void:
+	if _tab_iconic == null:
+		return
+	var key: StringName = entry.get("key", &"")
+	for child in _tab_iconic.get_children():
+		if child is Button and child.has_meta("iconic_key") and child.get_meta("iconic_key") == key:
+			child.text = entry.get("label", "🏛️ Bâtiment")
+			return
+	var btn := Button.new()
+	btn.text = entry.get("label", "🏛️ Bâtiment")
+	btn.tooltip_text = "Taille : %s m" % str(entry.get("size", Vector3.ZERO))
+	btn.set_meta("iconic_key", key)
+	btn.pressed.connect(func(): catalog_selected.emit(key))
+	_tab_iconic.add_child(btn)
 
 # ---------- Construction ----------
 
