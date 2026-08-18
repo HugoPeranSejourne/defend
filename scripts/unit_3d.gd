@@ -158,6 +158,24 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 
+	# Touches 1, 2, 3, 4 : Basculer vers un autre membre de l'escouade
+	if event is InputEventKey and event.pressed and not event.echo:
+		var target_idx := -1
+		if event.keycode == KEY_1 or event.keycode == KEY_KP_1: target_idx = 0
+		elif event.keycode == KEY_2 or event.keycode == KEY_KP_2: target_idx = 1
+		elif event.keycode == KEY_3 or event.keycode == KEY_KP_3: target_idx = 2
+		elif event.keycode == KEY_4 or event.keycode == KEY_KP_4: target_idx = 3
+
+		if target_idx >= 0:
+			var units := get_tree().get_nodes_in_group("units")
+			if target_idx < units.size():
+				var target_unit := units[target_idx] as Unit3D
+				if is_instance_valid(target_unit) and target_unit != self:
+					exit_fps_mode()
+					target_unit.enter_fps_mode()
+					get_viewport().set_input_as_handled()
+					return
+
 	# Touche Bullet-Time / Shoot Dodge (Shift / Clic Droit / E / Bouton Souris)
 	if event.is_action_pressed("toggle_bullet_time") or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed) or (event is InputEventKey and event.keycode == KEY_SHIFT and event.pressed):
 		_trigger_bullet_time_or_dodge()

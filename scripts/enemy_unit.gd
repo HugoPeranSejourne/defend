@@ -194,6 +194,10 @@ func _die(bullet_dir: Vector3 = Vector3.ZERO, is_non_lethal := false) -> void:
 	remove_from_group("enemies")
 	enemy_died.emit(self)
 
+	var stages := get_tree().get_nodes_in_group("main_stages")
+	if not stages.is_empty() and stages[0].has_method("record_enemy_neutralized"):
+		stages[0].call("record_enemy_neutralized", is_non_lethal)
+
 	var corpse_mgrs := get_tree().get_nodes_in_group("corpse_managers")
 	if not corpse_mgrs.is_empty() and corpse_mgrs[0].has_method("add_corpse"):
 		corpse_mgrs[0].call("add_corpse", global_position, rotation.y, true)
@@ -213,6 +217,17 @@ func start_days_gone_climb(target_y: float, wall_node: Node3D = null) -> void:
 		_current_wall.call("register_climber", self)
 		var lat_offset := (randf() - 0.5) * 0.9
 		global_position += transform.basis.x * lat_offset
+
+		# Écroulement de corniche si surcharge (>4 ennemis sur le même mur)
+		var climbers: Array = _current_wall.get("attached_climbers") if _current_wall.get("attached_climbers") != null else []
+		if climbers.size() >= 4:
+			print("[SWARM OVERLOAD] Corniche effondrée sous le poids de l'essaim !")
+			var debris_script := load("res://scripts/debris_system.gd") as GDScript
+			if debris_script and debris_script.has_method("spawn_rubble_explosion"):
+				debris_script.call("spawn_rubble_explosion", get_tree().root, global_position + Vector3(0, 1.5, 0), 12)
+			for climber in climbers:
+				if is_instance_valid(climber) and climber.has_method("collapse_from_wall"):
+					climber.call("collapse_from_wall")
 
 func collapse_from_wall() -> void:
 	if is_climbing_wall:

@@ -34,6 +34,19 @@ func _ready() -> void:
 	_update_hud_opinion()
 	_check_and_load_custom_map()
 
+func record_enemy_neutralized(is_non_lethal: bool) -> void:
+	if is_non_lethal:
+		public_opinion = min(max_public_opinion, public_opinion + 1.8)
+		print("[PUBLIC OPINION] Neutralisation non-létale ! Opinion : ", public_opinion)
+	else:
+		public_opinion = max(0.0, public_opinion - 2.8)
+		print("[PUBLIC OPINION] Escalade létale ! Opinion : ", public_opinion)
+	_update_hud_opinion()
+
+func _update_hud_opinion() -> void:
+	if main_hud and main_hud.has_method("update_opinion"):
+		main_hud.call("update_opinion", public_opinion, max_public_opinion)
+
 func _check_and_load_custom_map() -> void:
 	var custom_map_path: String = GameState.pending_map_path if GameState and GameState.pending_map_path != "" else ProjectSettings.get_setting("game/custom_map_path", "")
 	if custom_map_path != "" and FileAccess.file_exists(custom_map_path):
