@@ -17,11 +17,11 @@ signal unit_deselected(unit: Unit3D)
 @export_group("Max Payne Bullet-Time & Shoot Dodge")
 @export var bullet_time_max_energy: float = 100.0
 @export var bullet_time_energy: float = 100.0
-@export var bullet_time_drain_rate: float = 25.0
+@export var bullet_time_drain_rate: float = 22.0
 @export var bullet_time_recharge_rate: float = 18.0
-@export var bullet_time_time_scale: float = 0.20
-@export var shoot_dodge_jump_force: float = 6.5
-@export var shoot_dodge_speed: float = 13.0
+@export var bullet_time_time_scale: float = 0.06 # Ralentissement spectaculaire 6%
+@export var shoot_dodge_jump_force: float = 6.8
+@export var shoot_dodge_speed: float = 13.5
 
 @export_group("Vue FPS & Armes")
 @export var mouse_sensitivity: float = 0.0025
@@ -47,9 +47,12 @@ var is_selected: bool = false
 var is_fps_controlled: bool = false
 var is_bullet_time_active: bool = false
 var is_shoot_dodging: bool = false
+var is_prone_landed: bool = false
+
 var shoot_dodge_dir: Vector3 = Vector3.ZERO
 var _target_pivot_rot: Vector3 = Vector3.ZERO
 var _has_started_dodge_jump: bool = false
+var _prone_timer: float = 0.0
 
 var _auto_shoot_timer: float = 0.0
 var _is_dying: bool = false
@@ -130,8 +133,10 @@ func exit_fps_mode() -> void:
 	_stop_bullet_time()
 	is_fps_controlled = false
 	is_shoot_dodging = false
+	is_prone_landed = false
 	if character_pivot:
 		character_pivot.rotation = Vector3.ZERO
+		character_pivot.position = Vector3.ZERO
 	if is_instance_valid(_fps_hud_node):
 		_fps_hud_node.call("set_hud_visible", false)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -183,7 +188,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventMouseMotion:
-		var sens_mult := 1.6 if is_bullet_time_active else 1.0
+		var sens_mult := 1.8 if is_bullet_time_active else 1.0
 		rotate_y(-event.relative.x * mouse_sensitivity * sens_mult)
 		_cam_pitch = clamp(_cam_pitch - event.relative.y * mouse_sensitivity * sens_mult, -1.2, 1.2)
 		if head_pivot:
@@ -232,8 +237,12 @@ func _start_bullet_time() -> void:
 func _stop_bullet_time() -> void:
 	is_bullet_time_active = false
 	is_shoot_dodging = false
+	is_prone_landed = false
 	Engine.time_scale = 1.0
 	_target_pivot_rot = Vector3.ZERO
+	if character_pivot:
+		character_pivot.rotation = Vector3.ZERO
+		character_pivot.position = Vector3.ZERO
 	_play_bullet_time_sound(false)
 
 func _start_shoot_dodge(input_dir: Vector2) -> void:
@@ -247,18 +256,19 @@ func _start_shoot_dodge(input_dir: Vector2) -> void:
 	var pitch := 0.0
 	var roll := 0.0
 
-	if input_dir.y < -0.1:
-		pitch = -50.0
-	elif input_dir.y > 0.1:
-		pitch = 45.0
+	if input_dir.y < -0.1: # Avant
+		pitch = -82.0 # Totalement allongé horizontalement en plein vol
+	elif input_dir.y > 0.1: # Arrière
+		pitch = 75.0
 
-	if input_dir.x < -0.1:
-		roll = -65.0
-	elif input_dir.x > 0.1:
-		roll = 65.0
+	if input_dir.x < -0.1: # Gauche
+		roll = -82.0
+	elif input_dir.x > 0.1: # Droite
+		roll = 82.0
 
 	_target_pivot_rot = Vector3(deg_to_rad(pitch), 0, deg_to_rad(roll))
 	is_shoot_dodging = true
+	is_prone_landed = false
 	_has_started_dodge_jump = true
 	_start_bullet_time()
 
@@ -298,7 +308,7 @@ func _perform_fps_shoot() -> void:
 			if collider and collider.has_method("take_non_lethal_damage") and is_fps_weapon_non_lethal:
 				collider.call("take_non_lethal_damage", 60.0, shoot_dir)
 			elif collider and collider.has_method("take_damage"):
-				var dmg_mult := 1.5 if is_bullet_time_active else 1.0
+				var dmg_mult := 1.8 if is_bullet_time_active else 1.0
 				collider.call("take_damage", auto_attack_damage * 2.0 * dmg_mult, shoot_dir, "chest_upper_left")
 
 	_create_fps_bullet_tracer(muzzle_pos, shoot_target_pos)
@@ -354,7 +364,7 @@ func _physics_process(delta: float) -> void:
 
 	if is_bullet_time_active:
 		bullet_time_energy = max(0.0, bullet_time_energy - bullet_time_drain_rate * real_delta)
-		if bullet_time_energy <= 0.0 and not is_shoot_dodging:
+		if bullet_time_energy <= 0.0 and not is_shoot_dodging and not is_prone_landed:
 			_stop_bullet_time()
 	else:
 		bullet_time_energy = min(bullet_time_max_energy, bullet_time_energy + bullet_time_recharge_rate * real_delta)
@@ -369,26 +379,54 @@ func _physics_process(delta: float) -> void:
 			if head_pivot:
 				head_pivot.rotation.x = _cam_pitch
 
-		# Plongeon Shoot-Dodge en plein vol
+		# Phase 1 : Plongeon Shoot-Dodge en plein vol
 		if is_shoot_dodging:
 			velocity.y -= _gravity * real_delta
 			velocity.x = shoot_dodge_dir.x * shoot_dodge_speed
 			velocity.z = shoot_dodge_dir.z * shoot_dodge_speed
 
 			if character_pivot:
-				character_pivot.rotation = character_pivot.rotation.lerp(_target_pivot_rot, real_delta * 12.0)
+				character_pivot.rotation = character_pivot.rotation.lerp(_target_pivot_rot, real_delta * 18.0)
 
 			if Input.is_action_pressed("fps_fire") and _auto_shoot_timer <= 0.0:
-				_auto_shoot_timer = 0.08
+				_auto_shoot_timer = 0.04
 				_perform_fps_shoot()
 
+			# Phase 2 : Atterrissage glissé au sol à plat (Max Payne Prone Slide)
 			if is_on_floor() and _has_started_dodge_jump:
 				is_shoot_dodging = false
+				is_prone_landed = true
 				_has_started_dodge_jump = false
+				_prone_timer = 1.8 # Reste allongé au sol glissant pendant 1.8s
+				if character_pivot:
+					character_pivot.position.y = -0.65 # Corps au sol à plat
+
+		# Phase 2 : Tir allongé au sol (Prone Floor Aim & Firing)
+		elif is_prone_landed:
+			velocity.x *= 0.92
+			velocity.z *= 0.92
+			_prone_timer -= real_delta
+
+			if character_pivot:
+				character_pivot.rotation = character_pivot.rotation.lerp(_target_pivot_rot, real_delta * 14.0)
+
+			if Input.is_action_pressed("fps_fire") and _auto_shoot_timer <= 0.0:
+				_auto_shoot_timer = 0.04
+				_perform_fps_shoot()
+
+			var input_dir := _get_movement_input_vector()
+			# Phase 3 : Relevé de combat (Get-Up Roll) lors du déplacement ou fin de chrono
+			if input_dir.length_squared() > 0.05 or _prone_timer <= 0.0:
+				is_prone_landed = false
 				_target_pivot_rot = Vector3.ZERO
 				if not Input.is_key_pressed(KEY_SHIFT):
 					_stop_bullet_time()
+
 		else:
+			if character_pivot:
+				character_pivot.position.y = lerp(character_pivot.position.y, 0.0, real_delta * 15.0)
+				character_pivot.rotation = character_pivot.rotation.lerp(Vector3.ZERO, real_delta * 15.0)
+
 			if not is_on_floor():
 				velocity.y -= _gravity * real_delta
 			elif Input.is_action_just_pressed("fps_jump"):
@@ -397,9 +435,6 @@ func _physics_process(delta: float) -> void:
 					_start_shoot_dodge(input_dir)
 				else:
 					velocity.y = 5.5
-
-			if character_pivot:
-				character_pivot.rotation = character_pivot.rotation.lerp(Vector3.ZERO, real_delta * 15.0)
 
 			var input_dir := _get_movement_input_vector()
 			if input_dir.length_squared() > 0.001:
@@ -420,7 +455,7 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 
 		if is_instance_valid(_fps_hud_node) and _fps_hud_node.has_method("update_bullet_time"):
-			_fps_hud_node.call("update_bullet_time", bullet_time_energy, bullet_time_max_energy, is_bullet_time_active, is_shoot_dodging)
+			_fps_hud_node.call("update_bullet_time", bullet_time_energy, bullet_time_max_energy, is_bullet_time_active, is_shoot_dodging or is_prone_landed)
 		return
 
 	if not is_on_floor():
