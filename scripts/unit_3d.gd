@@ -379,11 +379,23 @@ func _physics_process(delta: float) -> void:
 			if head_pivot:
 				head_pivot.rotation.x = _cam_pitch
 
+		# Stabilisation de la Caméra FPS : Garde la ligne d'horizon droite et horizontale pendant le plongeon
+		if head_pivot:
+			head_pivot.rotation.x = _cam_pitch - (character_pivot.rotation.x if character_pivot else 0.0)
+			head_pivot.rotation.z = -(character_pivot.rotation.z if character_pivot else 0.0)
+
 		# Phase 1 : Plongeon Shoot-Dodge en plein vol
 		if is_shoot_dodging:
 			velocity.y -= _gravity * real_delta
 			velocity.x = shoot_dodge_dir.x * shoot_dodge_speed
 			velocity.z = shoot_dodge_dir.z * shoot_dodge_speed
+
+			# Ajustement dynamique si le joueur veut changer de direction en l'air (ex: reculer avec S)
+			var air_input := _get_movement_input_vector()
+			if air_input.y > 0.1: # Touche S / Reculer
+				var back_dir := -transform.basis.z
+				velocity.x = back_dir.x * move_speed * 1.6
+				velocity.z = back_dir.z * move_speed * 1.6
 
 			if character_pivot:
 				character_pivot.rotation = character_pivot.rotation.lerp(_target_pivot_rot, real_delta * 18.0)
@@ -392,35 +404,35 @@ func _physics_process(delta: float) -> void:
 				_auto_shoot_timer = 0.04
 				_perform_fps_shoot()
 
-			# Phase 2 : Atterrissage glissé au sol à plat (Max Payne Prone Slide)
+			# Phase 2 : Atterrissage au sol
 			if is_on_floor() and _has_started_dodge_jump:
 				is_shoot_dodging = false
 				is_prone_landed = true
 				_has_started_dodge_jump = false
-				_prone_timer = 1.8 # Reste allongé au sol glissant pendant 1.8s
+				_prone_timer = 0.45 # Glissade courte et réactive (0.45s)
 				if character_pivot:
-					character_pivot.position.y = -0.65 # Corps au sol à plat
+					character_pivot.position.y = -0.55
 
-		# Phase 2 : Tir allongé au sol (Prone Floor Aim & Firing)
+		# Phase 2 : Tir au sol & Déblocage Réactif du Mouvement
 		elif is_prone_landed:
-			velocity.x *= 0.92
-			velocity.z *= 0.92
+			var input_dir := _get_movement_input_vector()
 			_prone_timer -= real_delta
 
-			if character_pivot:
-				character_pivot.rotation = character_pivot.rotation.lerp(_target_pivot_rot, real_delta * 14.0)
-
-			if Input.is_action_pressed("fps_fire") and _auto_shoot_timer <= 0.0:
-				_auto_shoot_timer = 0.04
-				_perform_fps_shoot()
-
-			var input_dir := _get_movement_input_vector()
-			# Phase 3 : Relevé de combat (Get-Up Roll) lors du déplacement ou fin de chrono
+			# Si le joueur appuie sur une touche de déplacement (ex: S pour reculer, W, A, D) ou fin du délai
 			if input_dir.length_squared() > 0.05 or _prone_timer <= 0.0:
 				is_prone_landed = false
 				_target_pivot_rot = Vector3.ZERO
 				if not Input.is_key_pressed(KEY_SHIFT):
 					_stop_bullet_time()
+			else:
+				velocity.x *= 0.85
+				velocity.z *= 0.85
+				if character_pivot:
+					character_pivot.rotation = character_pivot.rotation.lerp(_target_pivot_rot, real_delta * 14.0)
+
+				if Input.is_action_pressed("fps_fire") and _auto_shoot_timer <= 0.0:
+					_auto_shoot_timer = 0.04
+					_perform_fps_shoot()
 
 		else:
 			if character_pivot:
@@ -447,6 +459,10 @@ func _physics_process(delta: float) -> void:
 				velocity.x = 0.0
 				velocity.z = 0.0
 				_play_human_anim("idle")
+
+			if Input.is_action_pressed("fps_fire") and _auto_shoot_timer <= 0.0:
+				_auto_shoot_timer = 0.18
+				_perform_fps_shoot()
 
 			if Input.is_action_pressed("fps_fire") and _auto_shoot_timer <= 0.0:
 				_auto_shoot_timer = 0.18
